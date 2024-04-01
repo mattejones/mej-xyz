@@ -1,8 +1,9 @@
 ---
-company: "Apple"
+company: "MuleSoft and Salesforce"
 role: "Software Engineer"
 dateStart: "01/01/2020"
-dateEnd: "11/27/2022"
+dateEnd: "01/01/2022"
 ---
 
-Voluptatem est quaerat voluptas praesentium ipsa dolorem dignissimos nulla ratione distinctio quae maiores eligendi nostrum? Quibusdam, debitis voluptatum, lorem ipsum dolor. Sit amet consectetur adipisicing elit. Iure illo neque tempora.
+I worked in a variety of roles including Technical Support, Knowledge Management and Support Operations functions. I 
+contributed to major M&A projects post-aquisition as both a technical SME and providing some project leadership.

@@ -1,73 +1,28 @@
 ---
-title: "Getting started"
-description: "Hit the ground running."
-date: "Mar 22 2024"
+title: "Setting up my blog"
+description: "some notes on setting up my blog"
+date: "Apr 01 2024"
+draft: true
 ---
 
-The basic configuration of Nano is pretty simple.
+Today, I am setting up my blog and personal website. I have aimed for something quite simple to manage but 
+also technically interesting to work on, allowing me to continue to get experience in some areas. 
 
-Edit `src/consts.ts`
+### Basic Tech details
+The basic requirements I had for the site.
+1. **Markdown Support**, so I can contribute to my blog in a wide range of locations and using pretty standard tools. 
+2. **Self-Hostable**, I want to be able to self-host this site so I can be in charge and make technical decisions. 
+3. **Simple design**, The design needs to be simple, so I can update it from time to time and refine it.
 
-Customize the base site
+What I have settled on: 
+1. My site is stored in a private gitlab repo. The basis of my site is the [Astro Nano](https://github.com/markhorn-dev/astro-nano) theme, which I added as an upstream remote repository. 
+2. I have a staging environment for my site that is running on my local homelab. 
+3. I am working to script the deployment of the "dist" directory with npm to push static content up to my web server. 
+4. My web server runs nginx, which is a cloud VPS service at the moment. 
 
-```ts 
-// src/consts.ts
+### Some problems encountered so far
 
-export const SITE: Site = {
-  NAME: "Astro Nano",
-  EMAIL: "markhorn.dev@gmail.com",
-  NUM_POSTS_ON_HOMEPAGE: 3,
-  NUM_WORKS_ON_HOMEPAGE: 2,
-  NUM_PROJECTS_ON_HOMEPAGE: 3,
-};
-```
+I might write about these challenges in the future, but so far my biggest hurdle was fixing the versioning of npm and my OS. Without this
+I was facing an error, so I had to make some changes. 
 
-| Field | Req | Description |
-| :---- | :-- | :-----------|
-| NAME | Yes | Displayed in header and footer. Used in SEO and RSS. |
-| EMAIL | Yes | Displayed in contact section. |
-| NUM_POSTS | Yes | Limit num of posts on home page. |
-| NUM_WORKS | Yes | Limit num of works on home page. |
-| NUM_PROJECTS | Yes | Limit num of projects on home page. |
-
-Customize your page metadata
-
-```ts 
-// src/consts.ts
-
-export const HOME: Metadata = {
-  TITLE: "Home",
-  DESCRIPTION: "Astro Nano is a minimal and lightweight blog and portfolio.",
-};
-```
-
-| Field | Req | Description |
-| :---- | :-- | :-----------|
-| TITLE | Yes | Displayed in browser tab. Used in SEO and RSS. |
-| DESCRIPTION | Yes | Used in SEO and RSS. |
-
-Customize your social media
-
-```ts 
-// src/consts.ts
-
-export const SOCIALS: Socials = [
-  { 
-    NAME: "twitter-x",
-    HREF: "https://twitter.com/markhorn_dev",
-  },
-  { 
-    NAME: "github",
-    HREF: "https://github.com/markhorn-dev"
-  },
-  { 
-    NAME: "linkedin",
-    HREF: "https://www.linkedin.com/in/markhorn-dev",
-  }
-];
-```
-
-| Field | Req | Description |
-| :---- | :-- | :-----------|
-| NAME | Yes | Displayed in contact section as a link. |
-| HREF | Yes | External url to social media profile. |
+Working across a few different operating systems and platforms is a great exercise. I am using Windows for my desktop PC and my web server is OpenSuse. 

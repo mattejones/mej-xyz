@@ -1,8 +1,10 @@
 ---
-company: "TIBOC"
+company: "TIBCO"
 role: "Senior Support Engineer"
-dateStart: "11/27/2022"
-dateEnd: "Current"
+dateStart: "03/01/2011"
+dateEnd: "01/01/2015"
 ---
 
-Sit amet consectetur adipisicing elit. Iure illo neque tempora, voluptatem est quaerat voluptas praesentium ipsa dolorem dignissimos nulla ratione distinctio quae maiores eligendi nostrum? Quibusdam, debitis voluptatum, lorem ipsum dolor.
+I worked with a very new BPM tool as an SME. I learnt the product deeply and supported a few major APAC customers with
+implementing and production support of the tools. The product was very database-centric and worked under two ex-dba's who had
+a very deep knowledge of database principles and learnt a lot about DB technologies. I mentored less experienced team members too. 
