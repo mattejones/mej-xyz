@@ -31,7 +31,7 @@ const blog = (await getCollection("blog"))
     .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
 
 ---
-<PageLayout title={HOME.TITLE} description={HOME.DESCRIPTION}>
+<PageLayout title={tag} description={HOME.DESCRIPTION}>
     <Container>
         <h4 class="animate font-semibold text-black dark:text-white">
             Hi, I'm Matt Jones <span class="text-xl">👋🏻</span>
@@ -40,10 +40,7 @@ const blog = (await getCollection("blog"))
             <section>
                 <article class="space-y-4">
                     <p class="animate">
-                        This is my personal website, used to record any notes on the web.
-                    </p>
-                    <p class="animate">
-                        I was built using an Astro template. My tech stack includes astro, nginx, git, linux.
+                        This is a list of blog posts tagged with: {tag}
                     </p>
                 </article>
             </section>
@@ -51,7 +48,7 @@ const blog = (await getCollection("blog"))
             <section class="animate space-y-6">
                 <div class="flex flex-wrap gap-y-2 items-center justify-between">
                     <h5 class="font-semibold text-black dark:text-white">
-                        Latest posts
+                        {tag} posts
                     </h5>
                     <Link href="/blog">
                     See all posts
