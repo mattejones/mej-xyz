@@ -1,6 +1,6 @@
 ---
 company: "MuleSoft and Salesforce"
-role: "Software Engineer"
+role: "Various Roles"
 dateStart: "01/01/2020"
 dateEnd: "01/01/2022"
 ---
