@@ -2,7 +2,6 @@
 title: "Setting up my blog"
 description: "some notes on setting up my blog"
 date: "Apr 01 2024"
-draft: true
 ---
 
 Today, I am setting up my blog and personal website. I have aimed for something quite simple to manage but 
