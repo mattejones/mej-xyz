@@ -1,7 +1,7 @@
 ---
-company: "Facebook"
-role: "Intern"
-dateStart: "07/01/2019"
+company: "Atlassian"
+role: "Senior Support Engineer"
+dateStart: "01/01/2015"
 dateEnd: "12/31/2019"
 ---
 
