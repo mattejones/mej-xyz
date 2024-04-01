@@ -27,7 +27,7 @@ const { tag } = Astro.params;
 
 const blog = (await getCollection("blog"))
     .filter(post => !post.data.draft)
-    .filter(post => post => post.data.tags && post.data.tags?.includes(tag))
+    .filter(post => post.data.tags && post.data.tags.includes(tag))
     .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
 
 ---
