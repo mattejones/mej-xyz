@@ -1,6 +1,6 @@
 ---
-title: "Gif"
-description: "Astro Nano template doesn't include a tagging function, so I added one"
+title: "Decompiling java on the fly in vim"
+description: "Using Vim with Java Decompilers for fun code browsing"
 date: "May 13 2016"
 tags: ["tech"]
 ---
