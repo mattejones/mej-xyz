@@ -1,5 +1,5 @@
 ---
-title: "Adding Tags to Astro Nano"
+title: "Gif"
 description: "Astro Nano template doesn't include a tagging function, so I added one"
 date: "May 13 2016"
 tags: ["tech"]
