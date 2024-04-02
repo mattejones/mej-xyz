@@ -4,8 +4,10 @@ dist/
 # generated types
 .astro/
 
-# idea
+# editor junk
 .idea/
+.obsidian/
+
 
 # dependencies
 node_modules/
