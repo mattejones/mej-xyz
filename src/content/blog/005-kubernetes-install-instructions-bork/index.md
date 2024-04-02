@@ -1,12 +1,10 @@
 ---
 title: Kubernetes install guides all broke
 description: When unmaintained recipes need updates due to deprecation
-date: Apr 02 2024
+date: Apr 03 2024
 tags:
   - tech
 ---
-*Note: This is a post from an older blog that I have copied over. I haven't reviewed these instructions in some time.*
-
 I have been working on my homelab recently, which means more Kubernetes installs. In this process I discovered that google has deprecated their RPM packages. You can read about this [here](https://kubernetes.io/blog/2023/08/31/legacy-package-repository-deprecation/). 
 
 What is interesting is I came across a load of sites that carry basic instructions on how to install Kubernetes (essentially just summarizing the documentation) that have not been updated to reflect this change, announced in August, 2023. 
