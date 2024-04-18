@@ -18,8 +18,21 @@
                 "source": false
               }
             }
+          },
+          {
+            "id": "125af8c2b1cb92be",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "009-km-deflection-is-hard/index.md",
+                "mode": "source",
+                "source": false
+              }
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -85,7 +98,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "005-kubernetes-install-instructions-bork/index.md",
+                "file": "009-km-deflection-is-hard/index.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +115,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "005-kubernetes-install-instructions-bork/index.md",
+                "file": "009-km-deflection-is-hard/index.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +138,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "005-kubernetes-install-instructions-bork/index.md"
+                "file": "009-km-deflection-is-hard/index.md"
               }
             }
           }
@@ -148,8 +161,19 @@
   },
   "active": "0dba25f79cc2f186",
   "lastOpenFiles": [
-    "004-vim-java-class-decompilers/index.md",
+    "007-approachable-micronaut-kafka/index.md",
+    "009-km-deflection-is-hard/index.md",
+    "008-notes-on-blackmud/Notes on Blackmud.md",
+    "009-km-deflection-is-hard",
+    "example-content/08-draft-example/index.md",
+    "Untitled.md",
+    "009-km-deflection-is-hard",
+    "008-notes-on-blackmud",
     "005-kubernetes-install-instructions-bork/index.md",
+    "007-approachable-micronaut-kafka",
+    "006-how-my-website-works/index.md",
+    "006-how-my-website-works",
+    "004-vim-java-class-decompilers/index.md",
     "005-kubernetes-install-instructions-bork"
   ]
 }
