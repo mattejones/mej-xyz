@@ -3,6 +3,7 @@ title: Some generic notes on blackmud
 description: MUD
 date: Apr 10 2024
 tags: 
+  - gaming
 draft: true
 ---
 This is the ignorant leading the audience of none. 

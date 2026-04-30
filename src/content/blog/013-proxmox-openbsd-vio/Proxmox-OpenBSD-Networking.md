@@ -1,7 +1,7 @@
 ---
 title: "When OpenBSD's virtio Driver Says 'No Carrier': A Deep Dive into MSI-X, VLAN Tags, and Driver Bugs"
 description: "Debugging why OpenBSD VMs on Proxmox show permanent 'no carrier' on VLAN-tagged virtio interfaces, and what I learned about interrupt handling along the way"
-pubDate: 2026-02-16
+date: Feb 16 2026
 tags: ["openbsd", "proxmox", "networking", "virtualization", "debugging"]
 ---
 
