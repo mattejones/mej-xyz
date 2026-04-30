@@ -1,64 +1,98 @@
-![Astro Nano](_astro_nano.png)
+# mej.xyz
 
-Astro Nano is a static, minimalist, lightweight, lightning fast portfolio and blog theme.
+Personal website and technical blog of Matt E. Jones. Built with Astro, deployed on Cloudflare Pages.
 
-Built with Astro, Tailwind and Typescript, an no frameworks.
+Live at [mej.xyz](https://mej.xyz)
 
-It was designed as an even more minimal theme than my popular theme [Astro Sphere](https://github.com/markhorn-dev/astro-sphere)
+---
 
-## 🚀 Deploy your own
+## Stack
 
-[![Deploy with Vercel](_deploy_vercel.svg)](https://vercel.com/new/clone?repository-url=https://github.com/markhorn-dev/astro-nano)  [![Deploy with Netlify](_deploy_netlify.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/markhorn-dev/astro-nano)
+- **Framework:** [Astro 5](https://astro.build) (based on [Astro Nano](https://github.com/markhorn-dev/astro-nano))
+- **Styling:** Tailwind CSS
+- **Hosting:** Cloudflare Pages
+- **DNS:** Cloudflare
+- **Content:** Markdown / MDX
 
-## 📋 Features
+---
 
-- ✅ 100/100 Lighthouse performance
-- ✅ Responsive
-- ✅ Accessible
-- ✅ SEO-friendly
-- ✅ Typesafe
-- ✅ Minimal style
-- ✅ Light/Dark Theme
-- ✅ Animated UI
-- ✅ Tailwind styling
-- ✅ Auto generated sitemap
-- ✅ Auto generated RSS Feed
-- ✅ Markdown support
-- ✅ MDX Support (components in your markdown)
+## Branch Structure
 
-## 💯 Lighthouse score
-![Astro Nano Lighthouse Score](_lighthouse.png)
+| Branch | Purpose |
+|---|---|
+| `main` | Production — auto-deploys to mej.xyz on push |
+| `develop` | Working branch — builds to a preview URL on push |
 
-## 🕊️ Lightweight
-No frameworks or added bulk
+**Never commit directly to `main`.** Work on `develop` or a feature branch, then merge.
 
-## ⚡︎ Fast
-Rendered in ~40ms on localhost
+---
 
-## 📄 Configuration
+## Writing Workflow
 
-The blog posts on the demo serve as the documentation and configuration.
+1. Write a new post in `src/content/blog/` as a markdown file
+2. Push to `develop` — Cloudflare Pages builds a preview URL automatically
+3. Review the preview
+4. Merge `develop` → `main` — site goes live within ~60 seconds
 
-## 💻 Commands
+No build scripts. No SCP. No manual steps.
 
-All commands are run from the root of the project, from a terminal:
+---
 
-Replace npm with your package manager of choice. `npm`, `pnpm`, `yarn`, `bun`, etc
+## Content Structure
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run dev:network`     | Starts local dev server on local network         |
-| `npm run sync`            | Generates TypeScript types for all Astro modules.|
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run preview:network` | Preview build on local network                   |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-| `npm run lint`            | Run ESLint                                       |
-| `npm run lint:fix`        | Auto-fix ESLint issues                           |
+```
+src/content/
+├── blog/          # Blog posts (numbered directories, e.g. 014-my-post/)
+├── work/          # Work history entries
+└── projects/      # Project entries
+```
 
-## 🏛️ License
+Each post lives in its own directory with an `index.md` file. Frontmatter schema is defined in `src/content/config.ts`.
 
-MIT
+### Adding a new post
+
+Create a new numbered directory under `src/content/blog/`:
+
+```
+src/content/blog/014-my-new-post/
+└── index.md
+```
+
+Frontmatter:
+
+```yaml
+---
+title: "My New Post"
+description: "A short description"
+date: "Jan 01 2026"
+---
+```
+
+---
+
+## Local Development
+
+```bash
+nvm use 22
+npm install
+npm run dev        # starts dev server at localhost:4321
+npm run build      # production build to dist/
+npm run preview    # preview the production build locally
+```
+
+---
+
+## Project Config
+
+Site metadata, social links and homepage counts are configured in `src/consts.ts`.
+
+---
+
+## Deployment
+
+Cloudflare Pages builds automatically on push to any branch. Production deploys only trigger on `main`. All other branches get a preview URL.
+
+Build settings:
+- **Build command:** `npm run build`
+- **Output directory:** `dist`
+- **Node version:** 22
