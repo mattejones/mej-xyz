@@ -1,6 +1,6 @@
 ---
 title: Exploring an LLM Judge and human-in-the-loop patterns
-description: Building better quality text output with low-cost judges
+description: Building better quality text output with no-cost judges
 date: May 05 2026
 tags:
   - llm
