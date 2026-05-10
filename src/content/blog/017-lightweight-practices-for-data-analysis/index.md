@@ -107,7 +107,7 @@ Writing a [CLAUDE.md](https://docs.anthropic.com/en/docs/claude-code/memory) (or
 
 ### Taking it further
 
-This stack intentionally keeps complexity low. If it clicks for you, these are the natural next steps worth exploring.
+This stack intentionally keeps complexity low. If it works for you, these are the natural next steps worth exploring. (These are some sitting on my to-do list next time I have a relevant project).
 
 | Tool | What it adds |
 |---|---|
@@ -115,7 +115,7 @@ This stack intentionally keeps complexity low. If it clicks for you, these are t
 | [Quarto](https://quarto.org) | Literate programming for analysts. Code, SQL and prose live in the same document and render to HTML, PDF or Markdown. Numbers and narrative update together |
 | [Marimo](https://marimo.io) | A notebook experience that stores files as plain `.py` files, making them properly git-diffable unlike Jupyter |
 | [Polars](https://pola.rs) | A faster, more memory-efficient alternative to [pandas](https://pandas.pydata.org) for the pipeline layer, with a cleaner transformation API |
-| [Evidence](https://evidence.dev) | SQL and Markdown combine into shareable data apps and reports, without needing a BI tool |
+| [Evidence](https://evidence.dev) | ($) SQL and Markdown combine into shareable data apps and reports, without needing a BI tool|
 
 ### Wrapping up
 
