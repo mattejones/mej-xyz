@@ -4,6 +4,8 @@ description: Exploring and simulating chopping
 date: May 13 2026
 tags:
   - python
+
+draft: true
 ---
 I'm not a very good cook.
 
