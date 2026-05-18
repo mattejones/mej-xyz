@@ -56,7 +56,7 @@ Before trying to derive anything analytically, I built a simulator to generate g
 
 ### Polygon representation
 
-Each leaf is approximated as a 48-sided polygon — this was a tad easier than working with true circle geometry and close enough to work for this problem. Why 48? It is divisible by 4, 6, 8, and 12, which means cuts at common angles (horizontal, vertical, 45°) produce geometrically clean children. The number of sides does not need to be exact; it just needs to be high enough that the approximation does not introduce meaningful area error.
+Each leaf is approximated as a 48-sided polygon - this was a tad easier than working with true circle geometry and close enough to work for this problem. Why 48? It is divisible by 4, 6, 8, and 12, which means cuts at common angles (horizontal, vertical, 45°) produce geometrically clean children. The number of sides does not need to be exact; it just needs to be high enough that the approximation does not introduce meaningful area error.
 
 Each polygon is stored as an ordered list of 2D vertices in counter-clockwise winding order. The area is computed once using the [shoelace formula](https://en.wikipedia.org/wiki/Shoelace_formula) and cached:
 
@@ -132,13 +132,13 @@ The total pass count is roughly the sum of these two phases, scaled by the geome
 
 The warm-up phase follows the structure of a well-known probability puzzle: if you have $N$ different types of playing cards and you draw one at random each time (replacing it each time), how many draws does it take before you have seen every type at least once?
 
-At the start, every card you draw is a new one so progress is fast. But as your collection grows, more and more draws land on cards you have already seen. When you are missing just one type out of $N$, each draw has only a 1-in-$N$ chance of being the card you need. You can end up drawing the same familiar cards many times before that last one finally appears. The total expected wait turns out to grow as $\ln N$ — the natural logarithm of $N$.
+At the start, every card you draw is a new one so progress is fast. But as your collection grows, more and more draws land on cards you have already seen. When you are missing just one type out of $N$, each draw has only a 1-in-$N$ chance of being the card you need. You can end up drawing the same familiar cards many times before that last one finally appears. The total expected wait turns out to grow as $\ln N$ - the natural logarithm of $N$.
 
-To make that concrete: $\ln 10 \approx 2.3$, $\ln 100 \approx 4.6$, $\ln 1000 \approx 6.9$. Doubling the number of leaves does not double the warm-up cost; it only adds $\ln 2 \approx 0.7$ passes. This slow growth is why the formula is manageable at all — a thousandfold increase in leaf count adds fewer than five passes to the warm-up.
+To make that concrete: $\ln 10 \approx 2.3$, $\ln 100 \approx 4.6$, $\ln 1000 \approx 6.9$. Doubling the number of leaves does not double the warm-up cost; it only adds $\ln 2 \approx 0.7$ passes. This slow growth is why the formula is manageable at all. Multiplying the leave count by 1000 adds fewer than five passes to the warm-up.
 
 In the chopping problem, each pass plays the role of a card draw. The knife sweeps across the pile and hits each piece with a probability roughly proportional to its size relative to the pile. Larger pieces are more likely to be caught; smaller fragments can escape a given pass entirely. The target-largest strategy guarantees that the biggest remaining piece is always cut, but the other pieces it happens to catch on that same sweep are essentially random. On average, it takes approximately $\ln N$ passes before every original leaf has been cut at least once.
 
-This $\ln N$ term is the dominant contribution to the formula for any reasonably large $N$. It was also one of the first things confirmed when I later ran symbolic regression on the simulation data. Without any structural hints, the very first meaningful expression the algorithm found was $\ln N \times 1.71$ — just the logarithm multiplied by a constant, nothing else. The coupon-collector structure was already visible in the data before I had told it to look there.
+This $\ln N$ term is the dominant contribution to the formula for any reasonably large $N$. It was also one of the first things confirmed when I later ran symbolic regression on the simulation data. Without any structural hints, the very first meaningful expression the algorithm found was $\ln N \times 1.71$ which is just the logarithm multiplied by a constant, nothing else. The coupon-collector structure was already visible in the data before I had told it to look there.
 
 ### Phase 2: the binary tree recursion
 
@@ -172,9 +172,9 @@ Where $r$ is leaf radius, $d_{\text{eff}} \approx 0.55$ is the pile packing dens
 
 $R_{\text{free}}$ is what the pile radius would be on an infinitely large board: it grows with the square root of $N$ (more pieces, bigger pile) and with leaf size. $R_{\text{board}}$ is the physical limit imposed by the board edge.
 
-I initially used $R_{\text{board}}$ everywhere, reasoning that the pile would always fill the available space. For small numbers of large leaves on a big board, the pile never actually reaches the board edge — it sits in the centre, much smaller than the board constraint would suggest. Using the board radius in that case is equivalent to telling the formula the pile is several times larger than it actually is. The knife is predicted to make far more passes than needed, because the model thinks it is working through a much bigger heap.
+I initially used $R_{\text{board}}$ everywhere, reasoning that the pile would always fill the available space. For small numbers of large leaves on a big board, the pile never actually reaches the board edge, instead it sits in the centre, much smaller than the board constraint would suggest. Using the board radius in that case is equivalent to telling the formula the pile is several times larger than it actually is. The knife is predicted to make far more passes than needed, because the model thinks it is working through a much bigger heap.
 
-This single wrong assumption — treating every simulation as board-constrained regardless of how many leaves were actually in it — produced an $R^2$ of 0.53 when I tested the formula against 4,032 parameter combinations. Nearly half of all variance was unexplained. Switching to $R_{\text{eff}} = \min(R_{\text{free}},\, R_{\text{board}})$ lifted $R^2$ to 0.84. A single line change in the feature engineering step recovered 31 percentage points of explained variance. It is a good example of a modelling error that looks minor on paper but dominates empirical performance.
+This single wrong assumption I made where I was treating every simulation as board-constrained regardless of how many leaves were actually in it produced an $R^2$ of 0.53 when I tested the formula against 4,032 parameter combinations. Nearly half of all variance was unexplained. Switching to $R_{\text{eff}} = \min(R_{\text{free}},\, R_{\text{board}})$ lifted $R^2$ to 0.84. A single line change in the feature engineering step (of PySR) recovered 31 percentage points of explained variance. It is a good example of a modelling error that looks minor on paper but dominates empirical performance.
 
 The transition point $N_{\text{trans}}$ is where $R_{\text{free}} = R_{\text{board}}$ — the leaf count above which the board edge becomes the constraint:
 
@@ -284,7 +284,7 @@ For fast tasks (0.02s), a crashing worker can at most stall 10 tasks for 10 minu
 
 The coordinator serves a live web dashboard: total task counts by status, a completion progress bar, and a per-worker table with completed counts and last-seen timestamps. Workers can be paused and resumed without restarting anything.
 
-The worker setup card generates the three commands needed to connect a new machine — download the simulator, install dependencies, run — populated from the coordinator's own URL and the configured authentication key. Copy, paste, done.
+The worker setup card generates the three commands needed to connect a new machine: download the simulator, install dependencies, run the simulator, and auto-generated populated from the coordinator's own URL and the configured authentication key. Copy, paste, done.
 
 
 ![Coordinator dashboard](/images/coordinator-screenshot.png)
@@ -295,7 +295,7 @@ The coordinator runs natively on Windows (no WSL). SQLite's WAL journal mode, th
 
 Workers on WSL2, Linux, and Windows all connected to the same coordinator. One subtlety: the `multiprocessing` module on Windows uses the `spawn` start method rather than `fork`. This requires the worker entry point to be a top-level function in the module so it can be pickled and sent to the child process. Getting this wrong produces cryptic pickling errors at startup.
 
-NumPy's internal threading also needed attention. With four worker processes each trying to use all available cores for numpy operations, threads from different processes compete for CPU time and actual throughput falls. Setting `OMP_NUM_THREADS=1` per process — done in the subprocess entry function before any numpy imports — eliminates this contention.
+NumPy's internal threading also needed attention. With four worker processes each trying to use all available cores for numpy operations, threads from different processes compete for CPU time and actual throughput falls. Setting `OMP_NUM_THREADS=1` per process - done in the subprocess entry function before any numpy imports - eliminates this contention.
 
 ---
 
@@ -321,7 +321,7 @@ Combinations where all replications agreed closely receive higher weight in the 
 
 ## Symbolic regression
 
-[Symbolic regression](https://en.wikipedia.org/wiki/Symbolic_regression) is a form of machine learning that searches for a mathematical expression that fits a dataset, rather than fitting coefficients to a fixed formula structure. It searches over both the structure and the coefficients simultaneously — the output is a formula, not just numbers.
+[Symbolic regression](https://en.wikipedia.org/wiki/Symbolic_regression) is a form of machine learning that searches for a mathematical expression that fits a dataset, rather than fitting coefficients to a fixed formula structure. It searches over both the structure and the coefficients simultaneously - the output is a formula, not just numbers.
 
 [PySR](https://astroautomata.com/PySR/) implements this using an evolutionary algorithm in Julia with a Python interface. A population of candidate expressions evolves over many iterations: expressions are randomly mutated (changing operators, swapping sub-trees, adjusting constants) and selected for accuracy. The search explores a large space of possible formulas.
 
@@ -331,15 +331,15 @@ The key output is a **Pareto front**: a ranked table of expressions by complexit
 
 Getting PySR to produce useful results took one insight that changed everything: pre-normalising the target before fitting.
 
-The analytical formula involves $R_{\text{eff}}$, $c$, and $r$ as a ratio in the denominator. If PySR is asked to fit raw pass counts, it needs to independently discover that these three quantities appear together in that exact structure — requiring it to build $\log(R_{\text{eff}}) - \log(c) - \log(r)$ terms, which consumes many complexity units and pushes the correct formula beyond what a reasonable search budget can find.
+The analytical formula involves $R_{\text{eff}}$, $c$, and $r$ as a ratio in the denominator. If PySR is asked to fit raw pass counts, it needs to independently discover that these three quantities appear together in that exact structure requiring it to build $\log(R_{\text{eff}}) - \log(c) - \log(r)$ terms, which consumes many complexity units and pushes the correct formula beyond what a reasonable search budget can find.
 
-My first attempts returned $R^2 \approx -10$ on the test set — actively worse than just predicting the average. The cause turned out to be two problems at once: a wrong loss function (I had used a classification loss rather than a regression one) and asking PySR to find the formula in the wrong space. Both problems were fixed together.
+My first attempts returned $R^2 \approx -10$ on the test set which was actively worse than just predicting the average. The cause turned out to be two problems at once: a wrong loss function (I had used a classification loss rather than a regression one) and asking PySR to find the formula in the wrong space. Both problems were fixed together.
 
 Instead of fitting raw pass counts, divide out the known structural terms first:
 
 $$P_{\text{norm}} = \frac{P \cdot c \cdot r}{R_{\text{eff}}} \approx \ln N + T_f$$
 
-Now PySR is searching for a function of just two variables — $[\ln N,\; f]$ or $[\ln N,\; T_f]$ — with a target range of roughly 5 to 40. The search space collapses and the correct formula is reachable at low complexity.
+Now PySR is searching for a function of just two variables: $[\ln N,\; f]$ or $[\ln N,\; T_f]$ with a target range of roughly 5 to 40. The search space collapses and the correct formula is reachable at low complexity.
 
 Two runs were performed per regime:
 
@@ -384,7 +384,7 @@ The fine chop Pareto front independently found $\ln N \;/\; (f + 0.185)$ at comp
 
 ### The ~0.19 constant
 
-The consistent appearance of a ~0.19 shift in the $f$ denominator across multiple independent PySR runs is the most unexplained finding in the project. Physically motivated candidates include $r(1-r) = 3/16 = 0.1875$ — the variance of the Bernoulli split distribution, where $r = 3/4$ is the expected larger-child fraction after a random cut. Another candidate is $\gamma/3 \approx 0.192$, where $\gamma \approx 0.577$ is the Euler-Mascheroni constant that appears in the exact coupon-collector formula.
+The consistent appearance of a ~0.19 shift in the $f$ denominator across multiple independent PySR runs is the most unexplained finding in the project. Physically motivated candidates include $r(1-r) = 3/16 = 0.1875$ The variance of the Bernoulli split distribution, where $r = 3/4$ is the expected larger-child fraction after a random cut. Another candidate is $\gamma/3 \approx 0.192$, where $\gamma \approx 0.577$ is the Euler-Mascheroni constant that appears in the exact coupon-collector formula.
 
 Neither is close enough to justify replacing the fitted value. Pinning the constant to $3/16$ drops $R^2$ from 0.841 to 0.756. The constant remains empirical for now.
 
@@ -433,7 +433,7 @@ The transition between pile-limited and board-limited behaviour changes which $R
 
 ## Known limitations
 
-**Scatter-first bias.** The simulator initialises leaves scattered randomly across the full board and applies the first pass in that state. The pile collapse happens after each pass, not before. Pass 1 is therefore less efficient than all subsequent passes: pieces are spread across the board rather than concentrated in the heap the formula assumes. Correcting this would require a single pile collapse before the first cut begins and would likely tighten small-$N$ accuracy. The effect is small — one pass out of 13 to 30 total — but it is systematic.
+**Scatter-first bias.** The simulator initialises leaves scattered randomly across the full board and applies the first pass in that state. The pile collapse happens after each pass, not before. Pass 1 is therefore less efficient than all subsequent passes: pieces are spread across the board rather than concentrated in the heap the formula assumes. Correcting this would require a single pile collapse before the first cut begins and would likely tighten small-$N$ accuracy. The effect is small, one pass out of 13 to 30 total, but it is systematic.
 
 **The rough chop N-trend.** The formula is accurate around $N = 150$, overestimates for small $N$, and underestimates for large $N$. This systematic drift suggests the $\ln N$ coefficient is not precisely 1. Running PySR at 1000 iterations with a complexity budget of 12 could not find a clean correction; increasing to complexity 18 produced large-coefficient expressions that overfit the training data. The underlying cause is not resolved.
 
@@ -458,48 +458,48 @@ The transition between pile-limited and board-limited behaviour changes which $R
 
 ## Glossary
 
-**$N$** — the number of leaves being chopped.
+**$N$**: the number of leaves being chopped.
 
-**$f$** — the done threshold. A fragment is considered finished when its area is less than $f$ times the original leaf area. A value of 0.35 means a fragment must be no more than 35% of its original size to count as done.
+**$f$**: the done threshold. A fragment is considered finished when its area is less than $f$ times the original leaf area. A value of 0.35 means a fragment must be no more than 35% of its original size to count as done.
 
-**$c$** — cuts per pass: the number of knife strokes in a single pass over the pile.
+**$c$**: cuts per pass: the number of knife strokes in a single pass over the pile.
 
-**$r$** — leaf radius in centimetres.
+**$r$**: leaf radius in centimetres.
 
-**$\ln N$** — the natural logarithm of $N$. This grows slowly: $\ln 10 \approx 2.3$, $\ln 100 \approx 4.6$, $\ln 1000 \approx 6.9$.
+**$\ln N$**: the natural logarithm of $N$. This grows slowly: $\ln 10 \approx 2.3$, $\ln 100 \approx 4.6$, $\ln 1000 \approx 6.9$.
 
-**$k$** — the number of cuts needed to reduce a single leaf to below the threshold, derived from the expected $3/4$-ratio split per cut.
+**$k$**: the number of cuts needed to reduce a single leaf to below the threshold, derived from the expected $3/4$-ratio split per cut.
 
-**$T_f$** — the refinement term: the number of additional passes needed after the warm-up phase, accounting for how many fragments are being reduced simultaneously.
+**$T_f$**: the refinement term: the number of additional passes needed after the warm-up phase, accounting for how many fragments are being reduced simultaneously.
 
-**$R_{\text{eff}}$** — effective pile radius. The smaller of the natural pile radius ($R_{\text{free}}$) and the board constraint ($R_{\text{board}}$).
+**$R_{\text{eff}}$**: effective pile radius. The smaller of the natural pile radius ($R_{\text{free}}$) and the board constraint ($R_{\text{board}}$).
 
-**$R_{\text{free}}$** — the pile radius the heap would naturally form on an infinite board, growing as the square root of $N$.
+**$R_{\text{free}}$**: the pile radius the heap would naturally form on an infinite board, growing as the square root of $N$.
 
-**$R_{\text{board}}$** — half the shorter board dimension, minus 1 cm for edge clearance.
+**$R_{\text{board}}$**: half the shorter board dimension, minus 1 cm for edge clearance.
 
-**$N_{\text{trans}}$** — the leaf count at which the pile transitions from free to board-constrained.
+**$N_{\text{trans}}$**: the leaf count at which the pile transitions from free to board-constrained.
 
-**$R^2$** — coefficient of determination: a measure of how well a formula fits a dataset. A value of 1.0 is a perfect fit; 0.0 means the formula does no better than predicting the average; negative values mean it is actively worse than that.
+**$R^2$**: coefficient of determination: a measure of how well a formula fits a dataset. A value of 1.0 is a perfect fit; 0.0 means the formula does no better than predicting the average; negative values mean it is actively worse than that.
 
-**Pareto front** — in symbolic regression, the set of candidate formulas representing the best trade-off between simplicity and accuracy. No formula on the Pareto front can be made more accurate without also becoming more complex.
+**Pareto front**: in symbolic regression, the set of candidate formulas representing the best trade-off between simplicity and accuracy. No formula on the Pareto front can be made more accurate without also becoming more complex.
 
-**Coupon collector problem** — the probability puzzle of how many random draws are needed to collect all $N$ distinct items when each draw is random with replacement. The expected number of draws grows as $N \ln N$; in this project's context the geometric nature of the cuts reduces this to approximately $\ln N$ passes.
+**Coupon collector problem**: the probability puzzle of how many random draws are needed to collect all $N$ distinct items when each draw is random with replacement. The expected number of draws grows as $N \ln N$; in this project's context the geometric nature of the cuts reduces this to approximately $\ln N$ passes.
 
 ---
 
 ## Further reading
 
-**Coupon collector problem** — [Wikipedia: Coupon collector's problem](https://en.wikipedia.org/wiki/Coupon_collector%27s_problem). The mathematical foundation for the warm-up phase of the formula.
+**Coupon collector problem**: [Wikipedia: Coupon collector's problem](https://en.wikipedia.org/wiki/Coupon_collector%27s_problem). The mathematical foundation for the warm-up phase of the formula.
 
-**Sutherland-Hodgman algorithm** — [Wikipedia: Sutherland-Hodgman algorithm](https://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm). The classical polygon clipping technique the simulator's cut logic is based on.
+**Sutherland-Hodgman algorithm**: [Wikipedia: Sutherland-Hodgman algorithm](https://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm). The classical polygon clipping technique the simulator's cut logic is based on.
 
-**Shoelace formula** — [Wikipedia: Shoelace formula](https://en.wikipedia.org/wiki/Shoelace_formula). How polygon area is computed from vertex coordinates.
+**Shoelace formula**:  [Wikipedia: Shoelace formula](https://en.wikipedia.org/wiki/Shoelace_formula). How polygon area is computed from vertex coordinates.
 
-**Symbolic regression** — [Wikipedia: Symbolic regression](https://en.wikipedia.org/wiki/Symbolic_regression). Background on the technique used to discover the formula from simulation data.
+**Symbolic regression**:  [Wikipedia: Symbolic regression](https://en.wikipedia.org/wiki/Symbolic_regression). Background on the technique used to discover the formula from simulation data.
 
-**PySR** — [astroautomata.com/PySR](https://astroautomata.com/PySR/). The symbolic regression library used in the analysis, originally developed for astrophysics data by Miles Cranmer.
+**PySR**:  [astroautomata.com/PySR](https://astroautomata.com/PySR/). The symbolic regression library used in the analysis, originally developed for astrophysics data by Miles Cranmer.
 
-**SQLite WAL mode** — [sqlite.org: WAL mode](https://www.sqlite.org/wal.html). The write-ahead logging journal mode used by the coordinator database, which allows concurrent reads alongside writes.
+**SQLite WAL mode**:  [sqlite.org: WAL mode](https://www.sqlite.org/wal.html). The write-ahead logging journal mode used by the coordinator database, which allows concurrent reads alongside writes.
 
 ---
