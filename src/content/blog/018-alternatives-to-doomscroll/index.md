@@ -1,6 +1,6 @@
 ---
 title: Some alternatives to doomscrolling
-description: 
+description: something
 date: May 15 2026
 tags:
   - data

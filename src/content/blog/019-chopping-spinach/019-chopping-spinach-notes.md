@@ -159,4 +159,13 @@ And if you're cooking: rough chop, go for the big pieces. Fine chop, sweep the w
 
 ---
 
-_Topics if you want to go further: fragmentation theory, Kolmogorov comminution theory, stochastic geometry, Galton-Watson branching processes, extreme value theory, greedy algorithms and scheduling theory, Smoluchowski coagulation-fragmentation equations, Gibrat's Law._
+_Topics if you want to go further: fragmentation theory, Kolmogorov comminution theory, stochastic geometry, Galton-Watson branching processes, extreme value theory, greedy algorithms and scheduling theory, Smoluchowski coagulation-fragmentation equations, Gibrat's Law.
+
+$$
+  \left(f + \frac{0.889}{f}\right) \left(logN - 4.21 + \frac{12.7}{logN - -0.951}\right) - \frac{0.0305}{logN - 4.48}
+  $$
+
+
+$$
+0.0958 + \frac{\sqrt{\frac{c}{T_{f}}}}{logN} + \frac{0.473 r}{R_{board}}
+$$
