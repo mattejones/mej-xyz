@@ -4,7 +4,6 @@ description: "Notes on getting started with komorebi - a tiling window manager"
 date: Mar 19 2026
 tags: ["tech", "windows", "productivity"]
 
-draft: false
 ---
 
 I'm experiementing with [komorebi](https://github.com/LGUG2Z/komorebi). It's a tiling window manager that makes it easier to work with larger screen real-estates. 
