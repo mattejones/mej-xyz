@@ -176,7 +176,7 @@ I initially used $R_{\text{board}}$ everywhere, reasoning that the pile would al
 
 This single wrong assumption I made where I was treating every simulation as board-constrained regardless of how many leaves were actually in it produced an $R^2$ of 0.53 when I tested the formula against 4,032 parameter combinations. Nearly half of all variance was unexplained. Switching to $R_{\text{eff}} = \min(R_{\text{free}},\, R_{\text{board}})$ lifted $R^2$ to 0.84. A single line change in the feature engineering step (of PySR) recovered 31 percentage points of explained variance. It is a good example of a modelling error that looks minor on paper but dominates empirical performance.
 
-The transition point $N_{\text{trans}}$ is where $R_{\text{free}} = R_{\text{board}}$ — the leaf count above which the board edge becomes the constraint:
+The transition point $N_{\text{trans}}$ is where $R_{\text{free}} = R_{\text{board}}$ - the leaf count above which the board edge becomes the constraint:
 
 $$N_{\text{trans}} = \frac{R_{\text{board}}^2 \cdot d_{\text{eff}}}{r^2}$$
 

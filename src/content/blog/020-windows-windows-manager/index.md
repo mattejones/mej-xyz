@@ -1,7 +1,7 @@
 ---
 title: "Windows Window Manager"
 description: "Notes on getting started with komorebi - a tiling window manager"
-date: Mar 19 2026
+date: May 19 2026
 tags: ["tech", "windows", "productivity"]
 
 ---
