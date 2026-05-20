@@ -1,34 +1,51 @@
 ---
-import Container from "@components/Container.astro";
-import Link from "@components/Link.astro";
 import { SITE } from "@consts";
+const path = Astro.url.pathname;
 ---
 
 <header>
-  <Container>
-    <div class="flex flex-wrap gap-y-2 justify-between">
-      <Link href="/" underline={false}>
-        <div class="font-semibold">
-          {SITE.NAME}
-        </div>
-      </Link>
-      <nav class="flex gap-1">
-        <Link href="/blog">
-          blog
-        </Link>
-        <span>
-          {`/`}
-        </span>
-        <Link href="/work">
-          work
-        </Link>
-        <span>
-          {`/`}
-        </span>
-        <Link href="/projects">
-          projects
-        </Link>
+  <div class="mx-auto max-w-4xl px-5 md:px-8">
+    <div class="flex flex-wrap items-center justify-between gap-y-2">
+      <a href="/" class="nav-mej" aria-label={`${SITE.NAME} — home`}>MEJ</a>
+      <nav class="flex items-center gap-5 md:gap-7">
+        {[
+          { href: "/blog",     label: "Blog"     },
+          { href: "/projects", label: "Projects" },
+          { href: "/work",     label: "CV"       },
+          { href: "/contact",  label: "Contact"  },
+        ].map(({ href, label }) => (
+          <a
+            href={href}
+            class={`font-sans font-bold text-xs uppercase tracking-widest transition-all duration-200 ${
+              path.startsWith(href)
+                ? "text-white underline underline-offset-4 decoration-2"
+                : "text-white/70 hover:text-white"
+            }`}
+          >
+            {label}
+          </a>
+        ))}
       </nav>
     </div>
-  </Container>
+  </div>
 </header>
+
+<style>
+  .nav-mej {
+    font-family: "Press Start 2P", monospace;
+    font-size: 0.8rem;
+    color: #fff;
+    letter-spacing: 0.06em;
+    text-shadow:
+      2px 2px 0 rgba(0, 0, 0, 0.25),
+      0 0 12px rgba(255, 255, 255, 0.2);
+    transition: opacity 0.15s ease, text-shadow 0.2s ease;
+    text-decoration: none;
+  }
+  .nav-mej:hover {
+    opacity: 0.85;
+    text-shadow:
+      2px 2px 0 rgba(0, 0, 0, 0.25),
+      0 0 20px rgba(255, 255, 255, 0.45);
+  }
+</style>

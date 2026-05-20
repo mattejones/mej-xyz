@@ -1,147 +1,96 @@
 ---
 import { getCollection } from "astro:content";
-import Container from "@components/Container.astro";
 import PageLayout from "@layouts/PageLayout.astro";
 import ArrowCard from "@components/ArrowCard.astro";
-import Link from "@components/Link.astro";
-import { dateRange } from "@lib/utils";
-import { SITE, HOME, SOCIALS } from "@consts";
+import MejBadge from "@components/MejBadge.astro";
+import { SITE, HOME } from "@consts";
 
 const blog = (await getCollection("blog"))
   .filter(post => !post.data.draft)
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0,SITE.NUM_POSTS_ON_HOMEPAGE);
+  .slice(0, SITE.NUM_POSTS_ON_HOMEPAGE);
 
 const projects = (await getCollection("projects"))
   .filter(project => !project.data.draft)
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0,SITE.NUM_PROJECTS_ON_HOMEPAGE);
-
-const allwork = (await getCollection("work"))
-  .sort((a, b) => new Date(b.data.dateStart).valueOf() - new Date(a.data.dateStart).valueOf())
-  .slice(0,SITE.NUM_WORKS_ON_HOMEPAGE);
-
-const work = await Promise.all(
-  allwork.map(async (item) => {
-    const { Content } = await item.render();
-    return { ...item, Content };
-  })
-);
-
+  .slice(0, SITE.NUM_PROJECTS_ON_HOMEPAGE);
 ---
 
 <PageLayout title={HOME.TITLE} description={HOME.DESCRIPTION}>
-  <Container>
-    <h4 class="animate font-semibold text-black dark:text-white">
-      Hi, I'm Matt Jones <span class="text-xl">👋🏻</span> 
-    </h4>
-    <div class="space-y-16">
-      <section>
-        <article class="space-y-4">
-          <p class="animate">
-            This is my personal website, used to record any notes on the web.  At the time of writing, I am interested
-            in homelabs, tech, reading, fitness, dogs, DIY. I live in England, United Kingdom and work fully remotely. I
-            live with my wife, two boys and a labradoodle named poppy.
+
+  <!-- HERO: two-column on desktop, dot-grid background -->
+  <section class="hero-grid" style="border-bottom: 2px solid var(--border)">
+    <div class="mx-auto max-w-4xl px-5 md:px-8">
+      <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center py-16 md:py-24">
+
+        <!-- Left: text + nav cards -->
+        <div class="animate">
+          <p class="font-sans font-bold text-xs uppercase tracking-widest mb-5 text-accent">
+            Matt E. Jones
           </p>
-          <p class="animate">
-          I hope to build this out as a personal, public notebook on the web, and gradually document my experiments and
-            learnings with various undertakings. I'm using Astro for this site, and so far I have found it very easy to
-            work with in a sensible workflow. 
+          <h1 class="font-display font-bold text-5xl md:text-6xl leading-none tracking-tight mb-6">
+            I write and<br />build things.
+          </h1>
+          <p class="font-serif text-base md:text-lg mb-10" style="color: var(--text-muted)">
+            Software engineer from England. I think in public, build in the open,
+            and occasionally write something worth reading.
           </p>
-        </article>
-      </section>
-
-      <section class="animate space-y-6">
-        <div class="flex flex-wrap gap-y-2 items-center justify-between">
-          <h5 class="font-semibold text-black dark:text-white">
-            Latest posts
-          </h5>
-          <Link href="/blog">
-            See all posts
-          </Link>
+          <div class="grid grid-cols-2 gap-3 max-w-xs">
+            <a href="/blog" class="nb-card group block p-4">
+              <div class="font-display font-bold leading-tight mb-1">Blog</div>
+              <div class="font-sans text-xs mb-3" style="color: var(--text-muted)">Notes &amp; ideas</div>
+              <div class="font-bold text-accent">→</div>
+            </a>
+            <a href="/projects" class="nb-card-accent group block p-4">
+              <div class="font-display font-bold leading-tight mb-1">Projects</div>
+              <div class="font-sans text-xs mb-3" style="color: rgba(255,255,255,0.7)">Things built</div>
+              <div class="font-bold text-white">→</div>
+            </a>
+          </div>
         </div>
-        <ul class="flex flex-col gap-4">
-          {blog.map(post => (
-            <li>
-              <ArrowCard entry={post} />
-            </li>
-          ))}
-        </ul>
-      </section>
 
-      <section class="animate space-y-6">
-        <div class="flex flex-wrap gap-y-2 items-center justify-between">
-          <h5 class="font-semibold text-black dark:text-white">
-            Work Experience
-          </h5>
-          <Link href="/work">
-            See all work
-          </Link>
+        <!-- Right: MEJ badge -->
+        <div class="animate flex justify-center md:justify-end items-center">
+          <MejBadge />
         </div>
-        <ul class="flex flex-col space-y-4">
-          {work.map(entry => (
-            <li>
-              <div class="text-sm opacity-75">
-                {dateRange(entry.data.dateStart, entry.data.dateEnd)}
-              </div>
-              <div class="font-semibold text-black dark:text-white">
-                {entry.data.company}
-              </div>
-              <div class="text-sm opacity-75">
-                {entry.data.role}
-              </div>
-              <article>
-                <entry.Content />
-              </article>
-            </li>
-          ))}
-        </ul>
-      </section>
 
-      <section class="animate space-y-6">
-        <div class="flex flex-wrap gap-y-2 items-center justify-between">
-          <h5 class="font-semibold text-black dark:text-white">
-            Recent projects
-          </h5>
-          <Link href="/projects">
-            See all projects
-          </Link>
-        </div>
-        <ul class="flex flex-col gap-4">
-          {projects.map(project => (
-            <li>
-              <ArrowCard entry={project} />
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section class="animate space-y-4">
-        <h5 class="font-semibold text-black dark:text-white">
-          Let's Connect
-        </h5>
-        <article>
-          <p>
-            If you want to get in touch with me about something or just to say hi,
-            reach out on social media or send me an email.
-          </p>
-        </article>
-        <ul class="flex flex-wrap gap-2">
-          {SOCIALS.map(SOCIAL => (
-            <li class="flex gap-x-2 text-nowrap">
-              <Link href={SOCIAL.HREF} external aria-label={`${SITE.NAME} on ${SOCIAL.NAME}`}>
-                {SOCIAL.NAME}
-              </Link>
-              {"/"}
-            </li>
-          ))}
-          <li class="line-clamp-1">
-            <Link href={`mailto:${SITE.EMAIL}`} aria-label={`Email ${SITE.NAME}`}>
-              {SITE.EMAIL}
-            </Link>
-          </li>
-        </ul>
-      </section>
+      </div>
     </div>
-  </Container>
+  </section>
+
+  <!-- CONTENT: two-column on desktop -->
+  <div class="mx-auto max-w-4xl px-5 md:px-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 py-12">
+
+      {blog.length > 0 && (
+        <section>
+          <div class="animate flex items-center justify-between gap-2 mb-6">
+            <h2 class="font-display font-bold text-xl">Recent writing</h2>
+            <a href="/blog" class="font-sans font-bold text-xs uppercase tracking-widest text-accent hover:underline">
+              All →
+            </a>
+          </div>
+          <ul class="animate flex flex-col gap-3">
+            {blog.map(post => <li><ArrowCard entry={post} /></li>)}
+          </ul>
+        </section>
+      )}
+
+      {projects.length > 0 && (
+        <section>
+          <div class="animate flex items-center justify-between gap-2 mb-6">
+            <h2 class="font-display font-bold text-xl">Projects</h2>
+            <a href="/projects" class="font-sans font-bold text-xs uppercase tracking-widest text-accent hover:underline">
+              All →
+            </a>
+          </div>
+          <ul class="animate flex flex-col gap-3">
+            {projects.map(project => <li><ArrowCard entry={project} /></li>)}
+          </ul>
+        </section>
+      )}
+
+    </div>
+  </div>
+
 </PageLayout>
