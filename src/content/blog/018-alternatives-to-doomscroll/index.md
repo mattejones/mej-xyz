@@ -20,4 +20,4 @@ https://vhs.neocities.org/ - a neocities search engine.. some iffy results here,
 https://wiby.me/ - another search engine, honestly, the surprise me link is just a huge sinkhole into the random internet.
 
 fun 
-[dealdice.org](https://realdice.org/) - literally real dice 
+[realdice.org](https://realdice.org/) - literally real dice 
