@@ -36,9 +36,17 @@
   .mej-badge-wrap.mej-selected {
     outline: 2px dashed rgba(0, 0, 0, 0.55);
     outline-offset: 8px;
+    animation: badge-select-pop 0.25s ease-out both;
   }
   .mej-badge-wrap.mej-selected .mej-badge {
     cursor: grab;
+  }
+
+  /* Brief scale-pop when selection activates (confirms long-press on mobile) */
+  @keyframes badge-select-pop {
+    0%   { transform: scale(0.92); }
+    60%  { transform: scale(1.06); }
+    100% { transform: scale(1);    }
   }
 
   /* ---- Resize handles ---- */
@@ -227,6 +235,11 @@
     let posAtStart  = { x: 0, y: 0 };
     let hasMoved    = false;
 
+    // Touch-specific state
+    const LONG_PRESS_MS       = 480;
+    let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastPointerWasTouch   = false;
+
     const ctrl = new AbortController();
     const sig  = ctrl.signal;
 
@@ -326,12 +339,23 @@
 
     badge.addEventListener("click", (e: MouseEvent) => {
       if (hasMoved) { hasMoved = false; return; }
+      if (lastPointerWasTouch) return; // touch uses long-press — ignore synthetic click
       e.stopPropagation();
       setSelected(!selected);
     });
 
     document.addEventListener("click", (e: MouseEvent) => {
-      if (selected && !wrap.contains(e.target as Node)) setSelected(false);
+      if (!selected || wrap.contains(e.target as Node)) return;
+      if (lastPointerWasTouch) {
+        // Tap-to-relocate: teleport the badge, centered on the tapped point
+        const x = Math.max(0, Math.min(e.clientX - curSize / 2, window.innerWidth  - curSize));
+        const y = Math.max(0, Math.min(e.clientY - curSize / 2, window.innerHeight - curSize));
+        wrap.style.left = x + "px";
+        wrap.style.top  = y + "px";
+        isAtHome = false;
+        saveSession();
+      }
+      setSelected(false);
     }, { signal: sig });
 
     document.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -341,19 +365,40 @@
     // ── Drag: move badge ──────────────────────────────────────────────────
 
     badge.addEventListener("pointerdown", (e: PointerEvent) => {
-      if (!selected) return;
+      lastPointerWasTouch = e.pointerType === "touch";
+
+      if (e.pointerType === "touch") {
+        if (!selected) {
+          // Touch + not selected → start long-press timer to enter move mode
+          longPressTimer = setTimeout(() => {
+            longPressTimer = null;
+            setSelected(true);
+            // Haptic buzz if supported (Android Chrome, etc.)
+            try { (navigator as any).vibrate?.(40); } catch {}
+          }, LONG_PRESS_MS);
+          return;
+        }
+        // Touch + already selected → fall through to start drag immediately
+      } else if (!selected) {
+        return; // mouse: only start drag when already selected via click
+      }
+
       e.preventDefault();
       e.stopPropagation();
       badge.setPointerCapture(e.pointerId);
-      hovering  = false;
-      hasMoved  = false;
-      ptrStartX = e.clientX;
-      ptrStartY = e.clientY;
-      const r   = wrap.getBoundingClientRect();
+      hovering   = false;
+      hasMoved   = false;
+      ptrStartX  = e.clientX;
+      ptrStartY  = e.clientY;
+      const r    = wrap.getBoundingClientRect();
       elemStartX = r.left;
       elemStartY = r.top;
       dragMode   = "move";
     });
+
+    // Clear long-press on lift or cancel
+    badge.addEventListener("pointerup",     () => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } });
+    badge.addEventListener("pointercancel", () => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } });
 
     // ── Drag: resize via corner handles ───────────────────────────────────
 
@@ -429,7 +474,13 @@
     // ── Hover tilt ────────────────────────────────────────────────────────
 
     badge.addEventListener("pointermove", (e: PointerEvent) => {
+      // Any touch movement cancels a pending long-press (user is scrolling, not holding)
+      if (longPressTimer && e.pointerType === "touch") {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
       if (dragMode) return;
+      if (e.pointerType === "touch") return; // no tilt on touch — causes jitter
       hovering = true;
       const rect = badge.getBoundingClientRect();
       updateTilt(
