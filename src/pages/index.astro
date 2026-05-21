@@ -17,33 +17,51 @@ const projects = (await getCollection("projects"))
 
 <PageLayout title={HOME.TITLE} description={HOME.DESCRIPTION}>
 
-  <!-- HERO: single-column, dot-grid background -->
+  <!-- HERO: two-column on desktop (text left, photo right), dot-grid background -->
   <section class="hero-grid" style="border-bottom: 2px solid var(--border)">
     <div class="mx-auto max-w-4xl px-5 md:px-8">
       <div class="relative z-10 py-16 md:py-24">
-        <div class="animate max-w-xl">
-          <p class="font-sans font-bold text-xs uppercase tracking-widest mb-5 text-accent">
-            Matt E. Jones
-          </p>
-          <h1 class="font-display font-bold text-5xl md:text-6xl leading-none tracking-tight mb-6">
-            I write and<br />build things.
-          </h1>
-          <p class="font-serif text-base md:text-lg mb-10" style="color: var(--text-muted)">
-            Software engineer from England. I think in public, build in the open,
-            and occasionally write something worth reading.
-          </p>
-          <div class="grid grid-cols-2 gap-3 max-w-xs">
-            <a href="/blog" class="nb-card group block p-4">
-              <div class="font-display font-bold leading-tight mb-1">Blog</div>
-              <div class="font-sans text-xs mb-3" style="color: var(--text-muted)">Notes &amp; ideas</div>
-              <div class="font-bold text-accent">→</div>
-            </a>
-            <a href="/projects" class="nb-card-accent group block p-4">
-              <div class="font-display font-bold leading-tight mb-1">Projects</div>
-              <div class="font-sans text-xs mb-3" style="color: rgba(255,255,255,0.7)">Things built</div>
-              <div class="font-bold text-white">→</div>
-            </a>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
+
+          <!-- Left: text + CTAs -->
+          <div class="animate">
+            <p class="font-sans font-bold text-xs uppercase tracking-widest mb-5 text-accent">
+              Matt E. Jones
+            </p>
+            <h1 class="font-display font-bold text-5xl md:text-6xl leading-none tracking-tight mb-6">
+              I write and<br />build things.
+            </h1>
+            <p class="font-serif text-base md:text-lg mb-10" style="color: var(--text-muted)">
+              Software engineer from England. I think in public, build in the open,
+              and occasionally write something worth reading.
+            </p>
+            <div class="grid grid-cols-2 gap-3 max-w-xs">
+              <a href="/blog" class="nb-card group block p-4">
+                <div class="font-display font-bold leading-tight mb-1">Blog</div>
+                <div class="font-sans text-xs mb-3" style="color: var(--text-muted)">Notes &amp; ideas</div>
+                <div class="font-bold text-accent">→</div>
+              </a>
+              <a href="/projects" class="nb-card-accent group block p-4">
+                <div class="font-display font-bold leading-tight mb-1">Projects</div>
+                <div class="font-sans text-xs mb-3" style="color: rgba(255,255,255,0.7)">Things built</div>
+                <div class="font-bold text-white">→</div>
+              </a>
+            </div>
           </div>
+
+          <!-- Right: photo -->
+          <div class="animate flex justify-center md:justify-end">
+            <div class="hero-photo-wrap">
+              <img
+                src="/images/matt-lanzarote.jpg"
+                alt="Matt Jones on a hilltop in Lanzarote"
+                class="hero-photo"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
