@@ -5,12 +5,12 @@ export const SITE: Site = {
   EMAIL: "me@mej.xyz",
   NUM_POSTS_ON_HOMEPAGE: 4,
   NUM_WORKS_ON_HOMEPAGE: 0,
-  NUM_PROJECTS_ON_HOMEPAGE: 2,
+  NUM_PROJECTS_ON_HOMEPAGE: 4,
 };
 
 export const HOME: Metadata = {
   TITLE: "Home",
-  DESCRIPTION: "Matt E. Jones — software engineer, writer, builder.",
+  DESCRIPTION: "Matt E. Jones — The Joyful Technologist.",
 };
 
 export const BLOG: Metadata = {
@@ -35,21 +35,12 @@ export const CONTACT: Metadata = {
 
 export const SOCIALS: Socials = [
   {
-    NAME: "twitter-x",
-    HREF: "https://twitter.com/me_jones",
-  },
-  {
-    NAME: "stack-overflow",
-    HREF: "https://stackoverflow.com/users/1265467/matt-jones",
-  },
-  {
     NAME: "linkedin",
     HREF: "https://www.linkedin.com/in/j0n35",
   },
 ];
 
 export const SKILLS: string[] = [
-  // Update this list to match your actual skill set
   "TypeScript",
   "Python",
   "Go",
@@ -61,4 +52,7 @@ export const SKILLS: string[] = [
   "AWS",
   "Linux",
   "Homelab",
+  "Salesforce",
+  "HubSpot",
+  "Claude"
 ];
