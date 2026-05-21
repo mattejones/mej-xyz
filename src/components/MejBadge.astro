@@ -96,6 +96,10 @@
     user-select: none;
     position: relative;
     z-index: 1;
+    /* Prevent browser scroll/pan from stealing touch events — without this
+       real devices fire pointermove on the tiniest finger tremor and the
+       long-press timer is cancelled before it ever fires. */
+    touch-action: none;
     --rx: 0deg;
     --ry: 0deg;
     --mx: 50%;
@@ -249,7 +253,11 @@
       curSize = Math.max(MIN_SZ, sz);
       face.style.width  = curSize + "px";
       face.style.height = curSize + "px";
-      if (textEl) textEl.style.fontSize = ((1.1 * curSize) / DEF_SZ).toFixed(3) + "rem";
+      // Scale text against the 80px design reference, NOT against DEF_SZ.
+      // DEF_SZ is device-dependent (56 mobile / 80 desktop); if a 80px session
+      // is restored on a mobile device where DEF_SZ=56, the old formula gave
+      // 1.57rem which overflowed the circle and clipped the "M" in "MEJ".
+      if (textEl) textEl.style.fontSize = ((1.1 * curSize) / 80).toFixed(3) + "rem";
       if (glowEl) glowEl.style.inset    = -Math.round(curSize * 0.267) + "px";
     }
 
@@ -335,6 +343,13 @@
       if (isAtHome) goHome();
     }, { signal: sig });
 
+    // Track whether the most recent pointer anywhere on the page was touch.
+    // Checked in click handlers to decide "select-toggle vs tap-to-relocate".
+    // Must be document-level so it's current when user taps OUTSIDE the badge.
+    document.addEventListener("pointerdown", (e: PointerEvent) => {
+      lastPointerWasTouch = e.pointerType === "touch";
+    }, { signal: sig });
+
     // ── Select / deselect ─────────────────────────────────────────────────
 
     badge.addEventListener("click", (e: MouseEvent) => {
@@ -369,7 +384,10 @@
 
       if (e.pointerType === "touch") {
         if (!selected) {
-          // Touch + not selected → start long-press timer to enter move mode
+          // Store start position so pointermove can apply a tolerance threshold
+          // before cancelling — real devices fire move on the tiniest tremor.
+          ptrStartX = e.clientX;
+          ptrStartY = e.clientY;
           longPressTimer = setTimeout(() => {
             longPressTimer = null;
             setSelected(true);
@@ -474,10 +492,16 @@
     // ── Hover tilt ────────────────────────────────────────────────────────
 
     badge.addEventListener("pointermove", (e: PointerEvent) => {
-      // Any touch movement cancels a pending long-press (user is scrolling, not holding)
+      // Cancel long-press only if the finger has moved more than 12px —
+      // real devices fire pointermove on the tiniest tremor, so a zero-tolerance
+      // check kills the timer before the 480ms ever elapses.
       if (longPressTimer && e.pointerType === "touch") {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
+        const dx = Math.abs(e.clientX - ptrStartX);
+        const dy = Math.abs(e.clientY - ptrStartY);
+        if (dx > 12 || dy > 12) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
       }
       if (dragMode) return;
       if (e.pointerType === "touch") return; // no tilt on touch — causes jitter

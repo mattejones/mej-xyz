@@ -36,7 +36,9 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-header {
+/* Target only the site-level header, not any <header> elements inside
+   article/MDX content (which would also get position:fixed otherwise). */
+body > header {
   @apply fixed top-0 left-0 right-0 z-50 py-4;
   background-color: var(--accent);
   border-bottom: 2px solid var(--border);
