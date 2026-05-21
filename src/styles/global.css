@@ -148,16 +148,21 @@ article {
 .hero-photo-wrap {
   border: 2px solid var(--border);
   box-shadow: 6px 6px 0 var(--border);
-  transform: rotate(2deg);
+  transform: rotate(2deg) translateZ(0);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
+  /* 1px radius is invisible visually but makes the browser use antialiased
+     clipping — without it, rotate + overflow:hidden causes a hairline gap
+     between the border and the image content. */
+  border-radius: 1px;
   max-width: 340px;
   width: 100%;
   flex-shrink: 0;
+  isolation: isolate;
 }
 
 .hero-photo-wrap:hover {
-  transform: rotate(0deg);
+  transform: rotate(0deg) translateZ(0);
   box-shadow: 4px 4px 0 var(--border);
 }
 
@@ -168,6 +173,8 @@ article {
   aspect-ratio: 1 / 1;
   object-fit: cover;
   object-position: center top;
+  /* GPU layer keeps the image pixel-perfect inside the rotated clip */
+  transform: translateZ(0);
 }
 
 @media (max-width: 767px) {
