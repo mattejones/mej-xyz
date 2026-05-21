@@ -19,12 +19,12 @@ import { SITE, SOCIALS } from "@consts";
             {s.NAME.replace(/-/g, " ")}
           </a>
         ))}
-        <a
+        <!--email_off--><a
           href={`mailto:${SITE.EMAIL}`}
           class="nb-card px-3 py-1.5 font-sans font-bold text-xs uppercase tracking-widest"
         >
           Email
-        </a>
+        </a><!--/email_off-->
         <button
           id="color-toggle-button"
           aria-label="Toggle colour mode"
