@@ -61,6 +61,31 @@ article {
   @apply prose-headings:text-[#111] prose-p:text-[#111];
 }
 
+/* ── KaTeX math ───────────────────────────────────────────────────────── */
+
+/* Display equations ($$...$$): neo-brutalist card treatment */
+.katex-display {
+  overflow-x: auto;   /* horizontal scroll on narrow screens — never clip */
+  overflow-y: hidden;
+  padding: 1.25rem 1.5rem;
+  margin: 1.75rem 0 !important;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+}
+
+.katex-display > .katex {
+  font-size: 1.1em;
+}
+
+/* Inline math ($...$): subtle accent-tinted pill */
+.katex:not(.katex-display > .katex) {
+  display: inline-block;
+  padding: 0.05em 0.3em;
+  background-color: color-mix(in srgb, var(--accent) 10%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
 @layer utilities {
   article a {
     @apply font-sans underline underline-offset-2;
