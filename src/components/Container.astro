@@ -1,7 +1,10 @@
 ---
-
+interface Props {
+  narrow?: boolean;
+}
+const { narrow } = Astro.props;
 ---
 
-<div class="mx-auto max-w-screen-sm px-5">
+<div class={`mx-auto px-5 md:px-8 ${narrow ? "max-w-2xl" : "max-w-4xl"}`}>
   <slot />
 </div>

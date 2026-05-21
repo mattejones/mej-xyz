@@ -2,13 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  overflow-y: scroll;
-  color-scheme: light;
+:root {
+  --bg: #F9F7F2;
+  --text: #111111;
+  --text-muted: #666666;
+  --border: #000000;
+  --accent: #3B5BDB;
+  --accent-2: #FF6B35;
+  --card-bg: #FFFFFF;
 }
 
-html.dark {
-  color-scheme: dark;
+/* Colour-off mode: greyscale accents, visibly different background */
+html[data-color="off"] {
+  --bg: #E8E8E8;
+  --card-bg: #F4F4F4;
+  --accent: #444444;
+  --accent-2: #888888;
+}
+
+html {
+  overflow-y: scroll;
 }
 
 html,
@@ -17,49 +30,251 @@ body {
 }
 
 body {
-  @apply font-sans antialiased;
-  @apply flex flex-col;
-  @apply bg-stone-100 dark:bg-stone-900;
-  @apply text-black/50 dark:text-white/75;
+  @apply font-sans antialiased flex flex-col;
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-header {
-  @apply fixed top-0 left-0 right-0 z-50 py-5;
-  @apply bg-stone-100/75 dark:bg-stone-900/25;
-  @apply backdrop-blur-sm saturate-200;
+/* Target only the site-level header, not any <header> elements inside
+   article/MDX content (which would also get position:fixed otherwise). */
+body > header {
+  @apply fixed top-0 left-0 right-0 z-50 py-4;
+  background-color: var(--accent);
+  border-bottom: 2px solid var(--border);
+  transition: background-color 0.3s ease;
 }
 
 main {
-  @apply flex-1 py-32;
+  @apply flex-1 pt-20 pb-16;
 }
 
 footer {
-  @apply py-5 text-sm;
+  @apply py-5;
+  border-top: 2px solid var(--border);
 }
 
 article {
-  @apply max-w-full prose dark:prose-invert prose-img:mx-auto prose-img:my-auto;
-  @apply prose-headings:font-semibold prose-p:font-serif;
-  @apply prose-headings:text-black prose-headings:dark:text-white;
+  @apply max-w-full prose prose-img:mx-auto prose-img:my-auto;
+  @apply prose-headings:font-display prose-headings:font-bold;
+  @apply prose-p:font-serif;
+  @apply prose-headings:text-[#111] prose-p:text-[#111];
+}
+
+/* ── KaTeX math ───────────────────────────────────────────────────────── */
+
+/* Display equations ($$...$$): neo-brutalist card treatment */
+.katex-display {
+  overflow-x: auto;   /* horizontal scroll on narrow screens — never clip */
+  overflow-y: hidden;
+  padding: 1.25rem 1.5rem;
+  margin: 1.75rem 0 !important;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+}
+
+.katex-display > .katex {
+  font-size: 1.1em;
+}
+
+/* Inline math ($...$): subtle accent-tinted pill */
+.katex:not(.katex-display > .katex) {
+  display: inline-block;
+  padding: 0.05em 0.3em;
+  background-color: color-mix(in srgb, var(--accent) 10%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 @layer utilities {
   article a {
-    @apply font-sans text-current underline underline-offset-2;
-    @apply decoration-black/15 dark:decoration-white/30;
-    @apply transition-colors duration-300 ease-in-out;
+    @apply font-sans underline underline-offset-2;
+    text-decoration-color: var(--accent);
+    transition: color 0.2s ease;
   }
   article a:hover {
-    @apply text-black dark:text-white;
-    @apply decoration-black/25 dark:decoration-white/50;
+    color: var(--accent);
   }
 }
+
+/* --- Neobrutalist components --- */
+
+.nb-card {
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+  transition: box-shadow 0.1s ease, transform 0.1s ease;
+}
+.nb-card:hover {
+  box-shadow: 2px 2px 0 var(--border);
+  transform: translate(2px, 2px);
+}
+
+.nb-card-accent {
+  background-color: var(--accent);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+  color: #fff;
+  transition: box-shadow 0.1s ease, transform 0.1s ease;
+}
+.nb-card-accent:hover {
+  box-shadow: 2px 2px 0 var(--border);
+  transform: translate(2px, 2px);
+}
+
+/* Colour toggle — stays visually pressed when colour is off */
+.nb-toggle-pressed {
+  box-shadow: none !important;
+  transform: translate(4px, 4px) !important;
+  background-color: var(--text) !important;
+  color: var(--card-bg) !important;
+}
+
+.nb-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 2px solid var(--border);
+  font-family: theme("fontFamily.sans");
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background-color: var(--accent-2);
+  color: var(--text);
+}
+
+/* --- Hero photo --- */
+
+.hero-photo-wrap {
+  border: 2px solid var(--border);
+  box-shadow: 6px 6px 0 var(--border);
+  transform: rotate(2deg) translateZ(0);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  /* 1px radius is invisible visually but makes the browser use antialiased
+     clipping — without it, rotate + overflow:hidden causes a hairline gap
+     between the border and the image content. */
+  border-radius: 1px;
+  max-width: 340px;
+  width: 100%;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+.hero-photo-wrap:hover {
+  transform: rotate(0deg) translateZ(0);
+  box-shadow: 4px 4px 0 var(--border);
+}
+
+.hero-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: center top;
+  /* GPU layer keeps the image pixel-perfect inside the rotated clip */
+  transform: translateZ(0);
+}
+
+@media (max-width: 767px) {
+  .hero-photo-wrap {
+    max-width: 260px;
+  }
+}
+
+/* --- Hero grid --- */
+
+.hero-grid {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dot-grid using radial gradient — uses accent colour, adapts per page */
+.hero-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 35%, transparent) 1.5px,
+    transparent 1.5px
+  );
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+  /* Fade hard on the left so text stays clean; visible toward the badge */
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.25) 30%,
+    rgba(0, 0, 0, 0.65) 60%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.25) 30%,
+    rgba(0, 0, 0, 0.65) 60%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* Shimmer band — a slanted light reflection that sweeps across periodically */
+.hero-grid::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(255, 255, 255, 0.055) 35%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.055) 65%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+  animation: hero-shimmer 12s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+@keyframes hero-shimmer {
+  0%        { transform: translateX(-180%); opacity: 0; }
+  6%        { opacity: 1; }
+  55%       { transform: translateX(420%); opacity: 1; }
+  62%, 100% { transform: translateX(420%); opacity: 0; }
+}
+
+/* On mobile, mask top/bottom instead of left/right */
+@media (max-width: 767px) {
+  .hero-grid::before {
+    -webkit-mask-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.4) 20%,
+      rgba(0, 0, 0, 0.4) 80%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.4) 20%,
+      rgba(0, 0, 0, 0.4) 80%,
+      transparent 100%
+    );
+  }
+}
+
+/* --- Scroll / animate --- */
 
 .animate {
   @apply opacity-0 translate-y-3;
   @apply transition-all duration-700 ease-out;
 }
-
 .animate.show {
   @apply opacity-100 translate-y-0;
 }
@@ -67,7 +282,6 @@ article {
 html #back-to-top {
   @apply opacity-0 pointer-events-none;
 }
-
 html.scrolled #back-to-top {
   @apply opacity-100 pointer-events-auto;
 }

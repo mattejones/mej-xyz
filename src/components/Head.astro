@@ -1,13 +1,20 @@
 ---
 import "../styles/global.css";
+import "katex/dist/katex.min.css";
 import "@fontsource/inter/latin-400.css";
 import "@fontsource/inter/latin-600.css";
 import "@fontsource/lora/400.css";
 import "@fontsource/lora/600.css";
+import "@fontsource/space-grotesk/latin-400.css";
+import "@fontsource/space-grotesk/latin-700.css";
+import "@fontsource/press-start-2p/latin-400.css";
 import inter400 from "@fontsource/inter/files/inter-latin-400-normal.woff2";
 import inter600 from "@fontsource/inter/files/inter-latin-600-normal.woff2";
 import lora400 from "@fontsource/lora/files/lora-latin-400-normal.woff2";
 import lora600 from "@fontsource/lora/files/lora-latin-600-normal.woff2";
+import sg400 from "@fontsource/space-grotesk/files/space-grotesk-latin-400-normal.woff2";
+import sg700 from "@fontsource/space-grotesk/files/space-grotesk-latin-700-normal.woff2";
+import ps2p from "@fontsource/press-start-2p/files/press-start-2p-latin-400-normal.woff2";
 import { ViewTransitions } from "astro:transitions";
 
 interface Props {
@@ -17,23 +24,23 @@ interface Props {
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-
 const { title, description, image = "/nano.png" } = Astro.props;
 ---
 
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 <meta name="generator" content={Astro.generator} />
 
 <!-- Font preloads -->
-<link rel="preload" href={inter400} as="font" type="font/woff2" crossorigin/>
-<link rel="preload" href={inter600} as="font" type="font/woff2" crossorigin/>
-<link rel="preload" href={lora400} as="font" type="font/woff2" crossorigin/>
-<link rel="preload" href={lora600} as="font" type="font/woff2" crossorigin/>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<link rel="preload" href={inter400} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={inter600} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={lora400} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={lora600} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={sg400} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={sg700} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={ps2p} as="font" type="font/woff2" crossorigin />
 
 <!-- Canonical URL -->
 <link rel="canonical" href={canonicalURL} />
@@ -57,7 +64,7 @@ const { title, description, image = "/nano.png" } = Astro.props;
 <meta property="twitter:description" content={description} />
 <meta property="twitter:image" content={new URL(image, Astro.url)} />
 
-<ViewTransitions  />
+<ViewTransitions />
 
 <script>
   import type { TransitionBeforeSwapEvent } from "astro:transitions/client";
@@ -71,53 +78,82 @@ const { title, description, image = "/nano.png" } = Astro.props;
 </script>
 
 <script is:inline>
+  // Per-page accent colours — override the CSS default via inline style
+  var PAGE_ACCENTS = [
+    ["/blog",     "#16A34A"],
+    ["/projects", "#DC2626"],
+    ["/work",     "#7C3AED"],
+    ["/contact",  "#EA580C"],
+  ];
+
+  function setPageAccent() {
+    if (document.documentElement.getAttribute("data-color") === "off") return;
+    var path = window.location.pathname;
+    var accent = "#3B5BDB";
+    for (var i = 0; i < PAGE_ACCENTS.length; i++) {
+      if (path.startsWith(PAGE_ACCENTS[i][0])) { accent = PAGE_ACCENTS[i][1]; break; }
+    }
+    document.documentElement.style.setProperty("--accent", accent);
+  }
+
+  function updateColorToggleState() {
+    var btn   = document.getElementById("color-toggle-button");
+    var label = document.getElementById("color-toggle-label");
+    if (!btn || !label) return;
+    var isOff = document.documentElement.getAttribute("data-color") === "off";
+    label.textContent = isOff ? "Colour: off" : "Colour: on";
+    if (isOff) {
+      btn.classList.add("nb-toggle-pressed");
+    } else {
+      btn.classList.remove("nb-toggle-pressed");
+    }
+  }
+
+  function preloadColor() {
+    var pref = localStorage.getItem("color");
+    if (pref === "off") {
+      document.documentElement.style.removeProperty("--accent");
+      document.documentElement.setAttribute("data-color", "off");
+    } else {
+      document.documentElement.removeAttribute("data-color");
+      setPageAccent();
+    }
+  }
+
   function init() {
-    preloadTheme();
+    preloadColor();
+    setPageAccent();
+    updateColorToggleState();
     onScroll();
     animate();
 
-    const backToTop = document.getElementById("back-to-top");
-    backToTop?.addEventListener("click", (event) => scrollToTop(event));
+    var backToPrev = document.getElementById("back-to-prev");
+    if (backToPrev) backToPrev.addEventListener("click", function() { window.history.back(); });
 
-    const backToPrev = document.getElementById("back-to-prev");
-    backToPrev?.addEventListener("click", () => window.history.back());
-
-    const lightThemeButton = document.getElementById("light-theme-button");
-    lightThemeButton?.addEventListener("click", () => {
-      localStorage.setItem("theme", "light");
-      toggleTheme(false);
-    });
-
-    const darkThemeButton = document.getElementById("dark-theme-button");
-    darkThemeButton?.addEventListener("click", () => {
-      localStorage.setItem("theme", "dark");
-      toggleTheme(true);
-    });
-
-    const systemThemeButton = document.getElementById("system-theme-button");
-    systemThemeButton?.addEventListener("click", () => {
-      localStorage.setItem("theme", "system");
-      toggleTheme(window.matchMedia("(prefers-color-scheme: dark)").matches);
-    });
-
-    window.matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", event => {
-        if (localStorage.theme === "system") {
-          toggleTheme(event.matches);
+    var colorToggleButton = document.getElementById("color-toggle-button");
+    if (colorToggleButton) {
+      colorToggleButton.addEventListener("click", function() {
+        var isOff = document.documentElement.getAttribute("data-color") === "off";
+        if (isOff) {
+          document.documentElement.removeAttribute("data-color");
+          localStorage.setItem("color", "on");
+          setPageAccent();
+        } else {
+          document.documentElement.style.removeProperty("--accent");
+          document.documentElement.setAttribute("data-color", "off");
+          localStorage.setItem("color", "off");
         }
-      }
-    );
+        updateColorToggleState();
+      });
+    }
 
     document.addEventListener("scroll", onScroll);
   }
 
   function animate() {
-    const animateElements = document.querySelectorAll(".animate");
-
-    animateElements.forEach((element, index) => {
-      setTimeout(() => {
-        element.classList.add("show");
-      }, index * 150);
+    var els = document.querySelectorAll(".animate");
+    els.forEach(function(el, i) {
+      setTimeout(function() { el.classList.add("show"); }, i * 150);
     });
   }
 
@@ -129,53 +165,9 @@ const { title, description, image = "/nano.png" } = Astro.props;
     }
   }
 
-  function scrollToTop(event) {
-    event.preventDefault();
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  }
+  document.addEventListener("DOMContentLoaded", function() { init(); });
+  document.addEventListener("astro:after-swap", function() { init(); });
 
-function toggleTheme(dark) {
-    const css = document.createElement("style");
-
-    css.appendChild(
-      document.createTextNode(
-        `* {
-             -webkit-transition: none !important;
-             -moz-transition: none !important;
-             -o-transition: none !important;
-             -ms-transition: none !important;
-             transition: none !important;
-          }
-        `,
-      )
-    );
-
-    document.head.appendChild(css);
-
-    if (dark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-
-  window.getComputedStyle(css).opacity;
-    document.head.removeChild(css);
-  }
-
-  function preloadTheme() {
-    const userTheme = localStorage.theme;
-
-    if (userTheme === "light" || userTheme === "dark") {
-      toggleTheme(userTheme === "dark");
-    } else {
-      toggleTheme(window.matchMedia("(prefers-color-scheme: dark)").matches);
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", () => init());
-  document.addEventListener("astro:after-swap", () => init());
-  preloadTheme();
+  // Run immediately before paint to avoid flash
+  preloadColor();
 </script>

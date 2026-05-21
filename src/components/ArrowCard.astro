@@ -1,42 +1,200 @@
 ---
 import type { CollectionEntry } from "astro:content";
-import FormattedDate from "@components/FormattedDate.astro";
 
 type Props = {
   entry: CollectionEntry<"blog"> | CollectionEntry<"projects">;
 }
 
 const { entry } = Astro.props;
-const isBlog = entry.collection === "blog";
-const tags = isBlog ? (entry as CollectionEntry<"blog">).data.tags : undefined;
+
+// Tags only exist on blog entries
+const tags: string[] =
+  entry.collection === "blog" && entry.data.tags ? entry.data.tags : [];
 ---
 
-<a href={`/${entry.collection}/${entry.slug}`} class="group flex py-3 px-4 rounded-lg border border-black/15 dark:border-white/20 hover:bg-black/5 dark:hover:bg-white/5 hover:text-black dark:hover:text-white transition-colors duration-300 ease-in-out">
-  <div class="flex items-start justify-between gap-3 w-full">
-    <div class="flex flex-col flex-1 min-w-0">
-      {isBlog && (
-        <div class="text-xs text-black/40 dark:text-white/40 mb-1">
-          <FormattedDate date={entry.data.date} />
-        </div>
-      )}
-      <div class="font-semibold">
-        {entry.data.title}
-      </div>
-      <div class="text-sm mt-1">
-        {entry.data.description}
-      </div>
-      {tags && tags.length > 0 && (
-        <div class="text-xs text-black/40 dark:text-white/40 mt-2 space-x-2">
-          {tags.map(tag => <span>#{tag}</span>)}
-        </div>
-      )}
+<a
+  href={`/${entry.collection}/${entry.slug}`}
+  class="nb-card nb-arrow-card group"
+  data-tags={JSON.stringify(tags)}
+>
+  <!-- Background word cloud — low z-index, clips to card -->
+  <div class="card-bg" aria-hidden="true"></div>
+
+  <!-- Foreground content -->
+  <div class="card-body">
+    <div class="card-title font-display font-bold text-base leading-tight">
+      {entry.data.title}
     </div>
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 24 24"
-      class="shrink-0 mt-0.5 size-5 stroke-2 fill-none stroke-current">
-      <line x1="5" y1="12" x2="19" y2="12" class="translate-x-3 group-hover:translate-x-0 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out" />
-      <polyline points="12 5 19 12 12 19" class="-translate-x-1 group-hover:translate-x-0 transition-transform duration-300 ease-in-out" />
-    </svg>
+    <div class="card-desc" style="color: var(--text-muted)">
+      <span class="card-desc-inner font-sans text-sm">{entry.data.description}</span>
+    </div>
   </div>
+
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    class="card-arrow shrink-0 size-5 stroke-2 fill-none stroke-current"
+    style="color: var(--accent)"
+  >
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </svg>
 </a>
+
+<style>
+  /* Comic Neue — open-source Comic Sans lookalike for Android / any device
+     that lacks Comic Sans MS as a system font. */
+  @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
+
+  .nb-arrow-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    position: relative;
+    isolation: isolate; /* own stacking context so z-index works */
+  }
+
+  /* Word cloud layer — hidden by default, clips at card edges */
+  .card-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+  .nb-arrow-card:hover .card-bg {
+    opacity: 1;
+  }
+
+  /* Content sits above the word cloud */
+  .card-body {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card-desc {
+    margin-top: 0.125rem;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .card-desc-inner {
+    display: inline-block;
+  }
+
+  .card-arrow {
+    position: relative;
+    z-index: 1;
+    transition: transform 0.2s ease;
+  }
+  .nb-arrow-card:hover .card-arrow {
+    transform: translateX(0.25rem);
+  }
+
+  /* Hide the effect entirely in colour-off mode — Comic Sans needs colour */
+  html[data-color="off"] .card-bg {
+    display: none;
+  }
+</style>
+
+<script>
+  const MEME_WORDS = [
+    "such wow", "much blog", "so tech", "very post", "w0w",
+    "big brain", "ship it", "lgtm", "10/10", "404 sleep",
+    "pls merge", "noice", "based", "poggers", "ez clap",
+    "hot take", "vim btw", "it works™",
+  ];
+
+  const BRIGHT_COLOURS = [
+    "#FF006E", "#FB5607", "#FFBE0B",
+    "#3A86FF", "#8338EC", "#06D6A0",
+    "#FF4D6D", "#FFCA3A", "#00B4D8",
+  ];
+
+  function rand(min: number, max: number) {
+    return min + Math.random() * (max - min);
+  }
+
+  function buildWordCloud(bg: HTMLElement, tags: string[]) {
+    const memes = MEME_WORDS.slice().sort(() => Math.random() - 0.5);
+    const words = [...tags, ...memes.slice(0, 4 + Math.floor(Math.random() * 4))];
+
+    bg.innerHTML = "";
+    words.forEach(word => {
+      const span = document.createElement("span");
+      span.textContent = word;
+      Object.assign(span.style, {
+        position:   "absolute",
+        fontFamily: '"Comic Neue", "Comic Sans MS", "Comic Sans", cursive',
+        fontSize:   rand(1.5, 3.2).toFixed(2) + "rem",
+        fontWeight: "bold",
+        color:      BRIGHT_COLOURS[Math.floor(Math.random() * BRIGHT_COLOURS.length)],
+        top:        rand(-20, 110).toFixed(1) + "%",
+        left:       rand(-8, 96).toFixed(1) + "%",
+        transform:  `rotate(${rand(-28, 28).toFixed(1)}deg)`,
+        whiteSpace: "nowrap",
+        lineHeight: "1",
+      });
+      bg.appendChild(span);
+    });
+  }
+
+  function initCards() {
+    document.querySelectorAll<HTMLElement>(".nb-arrow-card").forEach(card => {
+      const bg        = card.querySelector<HTMLElement>(".card-bg");
+      const descInner = card.querySelector<HTMLElement>(".card-desc-inner");
+      const descWrap  = card.querySelector<HTMLElement>(".card-desc");
+      const tags: string[] = JSON.parse(card.dataset.tags ?? "[]");
+
+      function showCloud() {
+        if (bg) buildWordCloud(bg, tags);
+        if (bg) bg.style.opacity = "1";
+        if (descInner && descWrap) {
+          const overflow = descWrap.scrollWidth - descWrap.clientWidth;
+          if (overflow > 10) {
+            const dur = (2.5 + overflow / 80).toFixed(2);
+            descInner.style.transition = `transform ${dur}s ease-in-out 0.5s`;
+            descInner.style.transform  = `translateX(-${overflow}px)`;
+          }
+        }
+      }
+
+      function hideCloud() {
+        if (bg) bg.style.opacity = "0";
+        if (descInner) {
+          descInner.style.transition = "transform 0.3s ease";
+          descInner.style.transform  = "translateX(0)";
+        }
+      }
+
+      // Mouse (desktop hover)
+      card.addEventListener("mouseenter", showCloud);
+      card.addEventListener("mouseleave", hideCloud);
+
+      // Touch (mobile tap-and-hold or tap toggle)
+      let touchTimer: ReturnType<typeof setTimeout> | null = null;
+      card.addEventListener("touchstart", () => {
+        touchTimer = setTimeout(showCloud, 120); // slight delay to avoid accidental trigger
+      }, { passive: true });
+      card.addEventListener("touchend", () => {
+        if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+        setTimeout(hideCloud, 600); // keep visible briefly so user can see it
+      }, { passive: true });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", initCards);
+  document.addEventListener("astro:after-swap",  initCards);
+</script>

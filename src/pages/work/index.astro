@@ -1,9 +1,8 @@
 ---
 import { getCollection } from "astro:content";
 import PageLayout from "@layouts/PageLayout.astro";
-import Container from "@components/Container.astro";
 import { dateRange } from "@lib/utils";
-import { WORK } from "@consts";
+import { WORK, SITE, SKILLS } from "@consts";
 
 const collection = (await getCollection("work"))
   .sort((a, b) => new Date(b.data.dateStart).valueOf() - new Date(a.data.dateStart).valueOf());
@@ -17,35 +16,69 @@ const work = await Promise.all(
 ---
 
 <PageLayout title={WORK.TITLE} description={WORK.DESCRIPTION}>
-  <Container>
-    <div class="space-y-10">
-      <div class="animate font-semibold text-black dark:text-white">
-        Work
+
+  <!-- Header -->
+  <section style="border-bottom: 2px solid var(--border)">
+    <div class="mx-auto max-w-4xl px-5 md:px-8">
+      <div class="py-14">
+        <div class="animate">
+          <p class="font-sans font-bold text-xs uppercase tracking-widest mb-4 text-accent">CV</p>
+          <h1 class="font-display font-bold text-5xl md:text-6xl leading-none tracking-tight mb-5">
+            {SITE.NAME}
+          </h1>
+          <p class="font-serif text-base max-w-lg" style="color: var(--text-muted)">
+            Software engineer based in England, working fully remotely.
+            Interested in homelabs, systems, and building things that are genuinely useful.
+          </p>
+        </div>
       </div>
-      <ul class="flex flex-col space-y-4">
-        { 
-          work.map(entry => (
-            <li class="animate">
-              <div class="text-sm opacity-75">
-                {dateRange(entry.data.dateStart, entry.data.dateEnd)}
-              </div>
-              <div class="font-semibold text-black dark:text-white">
-                {entry.data.company}
-              </div>
-              <div class="text-sm opacity-75">
-                {entry.data.role}
+    </div>
+  </section>
+
+  <!-- Two-column: skills + experience -->
+  <div class="mx-auto max-w-4xl px-5 md:px-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 py-10">
+
+      <!-- Skills sidebar -->
+      {SKILLS.length > 0 && (
+        <aside>
+          <div class="animate">
+            <h2 class="font-sans font-bold text-xs uppercase tracking-widest mb-5" style="color: var(--text-muted)">
+              Skills &amp; tools
+            </h2>
+            <div class="flex flex-wrap gap-2">
+              {SKILLS.map(skill => (
+                <span class="nb-tag">{skill}</span>
+              ))}
+            </div>
+          </div>
+        </aside>
+      )}
+
+      <!-- Experience (takes up remaining 2 columns) -->
+      <section class="md:col-span-2">
+        <h2 class="animate font-sans font-bold text-xs uppercase tracking-widest mb-8" style="color: var(--text-muted)">
+          Experience
+        </h2>
+        <ul class="flex flex-col gap-6">
+          {work.map(entry => (
+            <li class="animate nb-card p-6">
+              <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <div>
+                  <div class="font-display font-bold text-xl leading-tight">{entry.data.company}</div>
+                  <div class="font-sans font-semibold text-sm mt-0.5 text-accent">{entry.data.role}</div>
+                </div>
+                <span class="nb-tag shrink-0">{dateRange(entry.data.dateStart, entry.data.dateEnd)}</span>
               </div>
               <article>
                 <entry.Content />
               </article>
             </li>
-          ))
-        }
-      </ul>
-<!-- 
-      <ul class="animate flex flex-col gap-4">
+          ))}
+        </ul>
+      </section>
 
-      </ul> -->
     </div>
-  </Container>
+  </div>
+
 </PageLayout>
