@@ -1,70 +1,65 @@
 ---
 import { SITE } from "@consts";
+import MejBadge from "@components/MejBadge.astro";
 const path = Astro.url.pathname;
 ---
 
 <header>
   <div class="mx-auto max-w-4xl px-5 md:px-8">
     <div class="flex flex-wrap items-center justify-between gap-y-2">
-      <a href="/" class="nav-mej" aria-label={`${SITE.NAME} — home`}>MEJ</a>
-      <nav class="flex items-center gap-5 md:gap-7">
+
+      <!-- Badge lives here as the site logo on every page -->
+      <MejBadge />
+
+      <nav class="flex flex-wrap items-center gap-5 md:gap-7">
         {[
-          { href: "/blog",     label: "Blog"     },
-          { href: "/projects", label: "Projects" },
-          { href: "/work",     label: "CV"       },
-          { href: "/contact",  label: "Contact"  },
-        ].map(({ href, label }) => (
-          <a
-            href={href}
-            class={`font-sans font-bold text-xs uppercase tracking-widest transition-all duration-200 ${
-              path.startsWith(href)
-                ? "text-white underline underline-offset-4 decoration-2"
-                : "text-white/70 hover:text-white"
-            }`}
-          >
-            {label}
-          </a>
-        ))}
-        <span
-          id="score-display"
-          class="score-display"
-          aria-hidden="true"
-        ></span>
+          { href: "/",         label: "Home",     exact: true  },
+          { href: "/blog",     label: "Blog",     exact: false },
+          { href: "/projects", label: "Projects", exact: false },
+          { href: "/work",     label: "CV",        exact: false },
+          { href: "/contact",  label: "Contact",  exact: false },
+        ].map(({ href, label, exact }) => {
+          const active = exact ? path === href : path.startsWith(href);
+          return (
+            <a
+              href={href}
+              class={`font-sans font-bold text-xs uppercase tracking-widest transition-all duration-200 ${
+                active
+                  ? "text-white underline underline-offset-4 decoration-2"
+                  : "text-white/70 hover:text-white"
+              }`}
+            >
+              {label}
+            </a>
+          );
+        })}
+
+        <!-- Score indicator: naked pixel-font number in a box.
+             Content is set by ScoreTracker.astro JS; hidden until populated. -->
+        <span id="score-display" class="score-box" aria-hidden="true"></span>
       </nav>
     </div>
   </div>
 </header>
 
 <style>
-  .score-display {
-    font-family: "Press Start 2P", monospace;
-    font-size: 0.5rem;
-    color: rgba(255, 255, 255, 0.35);
-    letter-spacing: 0.04em;
-    min-width: 2ch;
-    text-align: right;
-    /* Hide until JS populates — avoids a flash of "0" on first load */
-    display: none;
-  }
-  .score-display:not(:empty) {
-    display: inline;
+  /* Keep the header's own overflow visible so the badge glow can spill out */
+  header {
+    overflow: visible;
   }
 
-  .nav-mej {
+  /* Score box — visually subordinate but readable */
+  .score-box {
     font-family: "Press Start 2P", monospace;
-    font-size: 0.8rem;
-    color: #fff;
-    letter-spacing: 0.06em;
-    text-shadow:
-      2px 2px 0 rgba(0, 0, 0, 0.25),
-      0 0 12px rgba(255, 255, 255, 0.2);
-    transition: opacity 0.15s ease, text-shadow 0.2s ease;
-    text-decoration: none;
+    font-size: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    padding: 3px 7px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    display: none; /* hidden until JS writes the score */
   }
-  .nav-mej:hover {
-    opacity: 0.85;
-    text-shadow:
-      2px 2px 0 rgba(0, 0, 0, 0.25),
-      0 0 20px rgba(255, 255, 255, 0.45);
+  .score-box:not(:empty) {
+    display: inline-block;
   }
 </style>

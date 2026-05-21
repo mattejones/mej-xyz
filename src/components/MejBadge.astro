@@ -64,7 +64,7 @@
 
   .mej-glow {
     position: absolute;
-    inset: -48px;
+    inset: -17px;
     border-radius: 50%;
     background: radial-gradient(
       circle at center,
@@ -100,8 +100,8 @@
 
   .mej-badge__face {
     position: relative;
-    width: 180px;
-    height: 180px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     border: 3px solid #000;
     box-shadow: 5px 5px 0 #000;
@@ -189,9 +189,9 @@
   }
 
   @media (max-width: 640px) {
-    .mej-badge__face { width: 130px; height: 130px; }
-    .mej-badge__text { font-size: 0.85rem; }
-    .mej-glow        { inset: -32px; }
+    .mej-badge__face { width: 52px; height: 52px; }
+    .mej-badge__text { font-size: 0.9rem; }
+    .mej-glow        { inset: -14px; }
   }
 </style>
 
@@ -220,9 +220,8 @@
     const SK_X    = "mejBadge_x";
     const SK_Y    = "mejBadge_y";
     const SK_SIZE = "mejBadge_size";
-    const MIN_SZ  = 80;
-    const MAX_SZ  = 320;
-    const DEF_SZ  = 180;
+    const MIN_SZ  = 40;   // no upper cap — user can resize freely
+    const DEF_SZ  = 64;
 
     let hovering  = false;
     let selected  = false;
@@ -242,7 +241,7 @@
     const ctrl = new AbortController();
     const sig  = ctrl.signal;
 
-    function clamp(v: number, lo: number, hi: number) {
+    function clamp(v: number, lo: number, hi: number = Infinity) {
       return Math.max(lo, Math.min(hi, v));
     }
 
@@ -272,7 +271,7 @@
     }
 
     function applySize(sz: number) {
-      curSize = clamp(sz, MIN_SZ, MAX_SZ);
+      curSize = clamp(sz, MIN_SZ);
       face.style.width  = curSize + "px";
       face.style.height = curSize + "px";
       if (textEl) textEl.style.fontSize = ((1.1 * curSize) / DEF_SZ).toFixed(3) + "rem";
@@ -371,8 +370,8 @@
         const dx = e.clientX - ptrStartX;
         const dy = e.clientY - ptrStartY;
         if (!hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) hasMoved = true;
-        wrap.style.left = clamp(elemStartX + dx, -curSize + 20, window.innerWidth  - 20) + "px";
-        wrap.style.top  = clamp(elemStartY + dy, -curSize + 20, window.innerHeight - 20) + "px";
+        wrap.style.left = (elemStartX + dx) + "px";
+        wrap.style.top  = (elemStartY + dy) + "px";
         return;
       }
 
@@ -384,17 +383,17 @@
         let ny = posAtStart.y;
 
         if (resizeDir === "se") {
-          newSz = clamp(sizeAtStart + (dx + dy) / 2, MIN_SZ, MAX_SZ);
+          newSz = clamp(sizeAtStart + (dx + dy) / 2, MIN_SZ);
           // top-left stays fixed
         } else if (resizeDir === "nw") {
-          newSz = clamp(sizeAtStart + (-dx - dy) / 2, MIN_SZ, MAX_SZ);
+          newSz = clamp(sizeAtStart + (-dx - dy) / 2, MIN_SZ);
           nx = posAtStart.x + sizeAtStart - newSz; // bottom-right stays fixed
           ny = posAtStart.y + sizeAtStart - newSz;
         } else if (resizeDir === "ne") {
-          newSz = clamp(sizeAtStart + (dx - dy) / 2, MIN_SZ, MAX_SZ);
+          newSz = clamp(sizeAtStart + (dx - dy) / 2, MIN_SZ);
           ny = posAtStart.y + sizeAtStart - newSz; // bottom-left stays fixed
         } else { // sw
-          newSz = clamp(sizeAtStart + (-dx + dy) / 2, MIN_SZ, MAX_SZ);
+          newSz = clamp(sizeAtStart + (-dx + dy) / 2, MIN_SZ);
           nx = posAtStart.x + sizeAtStart - newSz; // top-right stays fixed
         }
 
