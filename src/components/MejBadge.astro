@@ -1,0 +1,472 @@
+---
+---
+
+<div class="mej-badge-wrap" id="mej-badge-wrap">
+  <!-- Corner resize handles (visible when selected) -->
+  <div class="mej-handle" data-handle="nw" aria-hidden="true"></div>
+  <div class="mej-handle" data-handle="ne" aria-hidden="true"></div>
+  <div class="mej-handle" data-handle="sw" aria-hidden="true"></div>
+  <div class="mej-handle" data-handle="se" aria-hidden="true"></div>
+
+  <!-- Breathing glow -->
+  <div class="mej-glow" aria-hidden="true"></div>
+
+  <div class="mej-badge" id="mej-badge" role="img" aria-label="MEJ badge">
+    <div class="mej-badge__face">
+      <div class="mej-badge__holo"></div>
+      <div class="mej-badge__glare"></div>
+      <div class="mej-badge__scanlines"></div>
+      <span class="mej-badge__text">MEJ</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* The wrap starts as inline-flex; JS immediately overrides to position:fixed.
+     Keeping position:relative here prevents a layout flash before JS runs. */
+  .mej-badge-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---- Selection state ---- */
+
+  .mej-badge-wrap.mej-selected {
+    outline: 2px dashed rgba(0, 0, 0, 0.55);
+    outline-offset: 8px;
+  }
+  .mej-badge-wrap.mej-selected .mej-badge {
+    cursor: grab;
+  }
+
+  /* ---- Resize handles ---- */
+
+  .mej-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border: 2px solid #000;
+    display: none;
+    z-index: 20;
+    touch-action: none;
+  }
+  .mej-badge-wrap.mej-selected .mej-handle { display: block; }
+  .mej-handle[data-handle="nw"] { top: -5px;    left: -5px;  cursor: nw-resize; }
+  .mej-handle[data-handle="ne"] { top: -5px;    right: -5px; cursor: ne-resize; }
+  .mej-handle[data-handle="sw"] { bottom: -5px; left: -5px;  cursor: sw-resize; }
+  .mej-handle[data-handle="se"] { bottom: -5px; right: -5px; cursor: se-resize; }
+
+  /* ---- Glow ---- */
+
+  .mej-glow {
+    position: absolute;
+    inset: -21px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--accent) 45%, transparent) 0%,
+      transparent 65%
+    );
+    animation: badge-breathe 5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes badge-breathe {
+    0%, 100% { opacity: 0.45; transform: scale(0.88); }
+    50%       { opacity: 0.9;  transform: scale(1.08); }
+  }
+
+  /* ---- Badge ---- */
+
+  .mej-badge {
+    display: inline-block;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    z-index: 1;
+    --rx: 0deg;
+    --ry: 0deg;
+    --mx: 50%;
+    --my: 50%;
+    --holo-angle: 0deg;
+    --holo-opacity: 0;
+    --glare-opacity: 0;
+  }
+
+  .mej-badge__face {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid #000;
+    box-shadow: 5px 5px 0 #000;
+    background-color: var(--accent);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform:
+      perspective(500px)
+      rotateX(var(--rx))
+      rotateY(var(--ry));
+    transition:
+      transform 0.08s ease-out,
+      box-shadow 0.2s ease,
+      background-color 0.3s ease;
+    will-change: transform;
+  }
+
+  .mej-badge:hover .mej-badge__face {
+    box-shadow: 8px 14px 24px rgba(0, 0, 0, 0.25), 5px 5px 0 #000;
+  }
+
+  .mej-badge__holo {
+    position: absolute;
+    inset: -30%;
+    background: conic-gradient(
+      from var(--holo-angle) at 50% 50%,
+      #ff006e 0%, #fb5607 14%, #ffbe0b 28%,
+      #3a86ff 50%, #8338ec 64%, #ff006e 100%
+    );
+    mix-blend-mode: color-dodge;
+    opacity: var(--holo-opacity);
+    transition: opacity 0.3s ease;
+    border-radius: 50%;
+  }
+
+  .mej-badge__glare {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at var(--mx) var(--my),
+      rgba(255, 255, 255, 0.65) 0%,
+      rgba(255, 255, 255, 0.2) 30%,
+      transparent 65%
+    );
+    opacity: var(--glare-opacity);
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+
+  .mej-badge__scanlines {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0px, transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px, rgba(0, 0, 0, 0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .mej-badge__text {
+    font-family: "Press Start 2P", monospace;
+    font-size: 1.1rem;
+    color: #fff;
+    text-shadow:
+      2px 2px 0 rgba(0, 0, 0, 0.45),
+      0 0 16px rgba(255, 255, 255, 0.25);
+    position: relative;
+    z-index: 3;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 640px) {
+    .mej-badge__face { width: 64px; height: 64px; }
+    .mej-badge__text { font-size: 0.9rem; }
+    .mej-glow        { inset: -17px; }
+  }
+</style>
+
+<script>
+  // Cancel any running RAF before the page swap to avoid animating
+  // detached elements during the Astro ViewTransition.
+  document.addEventListener("astro:before-swap", () => {
+    if (_cleanup) { _cleanup(); _cleanup = null; }
+  });
+
+  function initBadge() {
+    const wrap  = document.getElementById("mej-badge-wrap") as HTMLElement | null;
+    const badge = document.getElementById("mej-badge")      as HTMLElement | null;
+    if (!wrap || !badge) return;
+
+    const face   = badge.querySelector(".mej-badge__face") as HTMLElement | null;
+    const holo   = badge.querySelector(".mej-badge__holo") as HTMLElement | null;
+    const textEl = badge.querySelector(".mej-badge__text") as HTMLElement | null;
+    const glowEl = wrap.querySelector(".mej-glow")         as HTMLElement | null;
+    if (!face) return;
+
+    // ── Constants ─────────────────────────────────────────────────────────
+    const SK_X    = "mejBadge_x";
+    const SK_Y    = "mejBadge_y";
+    const SK_SIZE = "mejBadge_size";
+    const MIN_SZ  = 40;   // no upper cap — user resizes freely
+    const DEF_SZ  = 80;
+
+    // ── State ──────────────────────────────────────────────────────────────
+    let hovering  = false;
+    let selected  = false;
+    let isAtHome  = true;   // true → re-anchor on window resize
+    let dragMode: null | "move" | "resize" = null;
+    let resizeDir = "";
+    let rafId     = 0;
+    let startTs   = 0;
+    let curSize   = DEF_SZ;
+
+    let ptrStartX = 0, ptrStartY = 0;
+    let elemStartX = 0, elemStartY = 0;
+    let sizeAtStart = 0;
+    let posAtStart  = { x: 0, y: 0 };
+    let hasMoved    = false;
+
+    const ctrl = new AbortController();
+    const sig  = ctrl.signal;
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    function applySize(sz: number) {
+      curSize = Math.max(MIN_SZ, sz);
+      face.style.width  = curSize + "px";
+      face.style.height = curSize + "px";
+      if (textEl) textEl.style.fontSize = ((1.1 * curSize) / DEF_SZ).toFixed(3) + "rem";
+      if (glowEl) glowEl.style.inset    = -Math.round(curSize * 0.267) + "px";
+    }
+
+    // Compute the badge's "home" position: left-aligned with the header's
+    // inner padding, and inset ~4 px from the header top so the badge
+    // hangs visibly below the nav bar.
+    function computeHome(): { x: number; y: number } {
+      const anchor = document.getElementById("badge-anchor");
+      const header = document.querySelector("header");
+      if (!anchor || !header) return { x: 8, y: 4 };
+      const aRect = anchor.getBoundingClientRect();
+      const hRect = header.getBoundingClientRect();
+      return {
+        x: aRect.left,
+        y: hRect.top + 4,
+      };
+    }
+
+    function goHome() {
+      const { x, y } = computeHome();
+      wrap.style.left = x + "px";
+      wrap.style.top  = y + "px";
+      isAtHome = true;
+    }
+
+    function saveSession() {
+      const r = wrap.getBoundingClientRect();
+      sessionStorage.setItem(SK_X,    String(Math.round(r.left)));
+      sessionStorage.setItem(SK_Y,    String(Math.round(r.top)));
+      sessionStorage.setItem(SK_SIZE, String(curSize));
+    }
+
+    function setSelected(on: boolean) {
+      selected = on;
+      wrap.classList.toggle("mej-selected", on);
+    }
+
+    // ── Position badge ─────────────────────────────────────────────────────
+    // The badge is a direct <body> child (placed by PageLayout.astro), so
+    // position:fixed is always relative to the viewport — no reparenting needed.
+    wrap.style.position = "fixed";
+    wrap.style.zIndex   = "60";
+    wrap.style.margin   = "0";
+
+    const sx = sessionStorage.getItem(SK_X);
+    const sy = sessionStorage.getItem(SK_Y);
+    const ss = sessionStorage.getItem(SK_SIZE);
+
+    if (sx !== null && sy !== null) {
+      // Restore saved position (badge was explicitly moved by user)
+      isAtHome = false;
+      applySize(ss ? Math.max(MIN_SZ, +ss) : DEF_SZ);
+      wrap.style.left = +sx + "px";
+      wrap.style.top  = +sy + "px";
+    } else {
+      // Default: anchor to header
+      applySize(DEF_SZ);
+      goHome();
+    }
+
+    // Re-anchor on resize if user hasn't moved the badge
+    window.addEventListener("resize", () => {
+      if (isAtHome) goHome();
+    }, { signal: sig });
+
+    // ── Select / deselect ─────────────────────────────────────────────────
+
+    badge.addEventListener("click", (e: MouseEvent) => {
+      if (hasMoved) { hasMoved = false; return; }
+      e.stopPropagation();
+      setSelected(!selected);
+    });
+
+    document.addEventListener("click", (e: MouseEvent) => {
+      if (selected && !wrap.contains(e.target as Node)) setSelected(false);
+    }, { signal: sig });
+
+    document.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelected(false);
+    }, { signal: sig });
+
+    // ── Drag: move badge ──────────────────────────────────────────────────
+
+    badge.addEventListener("pointerdown", (e: PointerEvent) => {
+      if (!selected) return;
+      e.preventDefault();
+      e.stopPropagation();
+      badge.setPointerCapture(e.pointerId);
+      hovering  = false;
+      hasMoved  = false;
+      ptrStartX = e.clientX;
+      ptrStartY = e.clientY;
+      const r   = wrap.getBoundingClientRect();
+      elemStartX = r.left;
+      elemStartY = r.top;
+      dragMode   = "move";
+    });
+
+    // ── Drag: resize via corner handles ───────────────────────────────────
+
+    wrap.querySelectorAll<HTMLElement>(".mej-handle").forEach(h => {
+      h.addEventListener("pointerdown", (e: PointerEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        h.setPointerCapture(e.pointerId);
+        ptrStartX   = e.clientX;
+        ptrStartY   = e.clientY;
+        sizeAtStart = curSize;
+        const r     = wrap.getBoundingClientRect();
+        posAtStart  = { x: r.left, y: r.top };
+        resizeDir   = h.dataset.handle ?? "";
+        dragMode    = "resize";
+      });
+    });
+
+    // ── Pointer move ──────────────────────────────────────────────────────
+
+    document.addEventListener("pointermove", (e: PointerEvent) => {
+      if (dragMode === "move") {
+        const dx = e.clientX - ptrStartX;
+        const dy = e.clientY - ptrStartY;
+        if (!hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) hasMoved = true;
+        wrap.style.left = (elemStartX + dx) + "px";
+        wrap.style.top  = (elemStartY + dy) + "px";
+        return;
+      }
+
+      if (dragMode === "resize") {
+        const dx = e.clientX - ptrStartX;
+        const dy = e.clientY - ptrStartY;
+        let newSz: number;
+        let nx = posAtStart.x;
+        let ny = posAtStart.y;
+
+        if (resizeDir === "se") {
+          newSz = Math.max(MIN_SZ, sizeAtStart + (dx + dy) / 2);
+        } else if (resizeDir === "nw") {
+          newSz = Math.max(MIN_SZ, sizeAtStart + (-dx - dy) / 2);
+          nx = posAtStart.x + sizeAtStart - newSz; // bottom-right stays fixed
+          ny = posAtStart.y + sizeAtStart - newSz;
+        } else if (resizeDir === "ne") {
+          newSz = Math.max(MIN_SZ, sizeAtStart + (dx - dy) / 2);
+          ny = posAtStart.y + sizeAtStart - newSz; // bottom-left stays fixed
+        } else { // sw
+          newSz = Math.max(MIN_SZ, sizeAtStart + (-dx + dy) / 2);
+          nx = posAtStart.x + sizeAtStart - newSz; // top-right stays fixed
+        }
+
+        wrap.style.left = nx + "px";
+        wrap.style.top  = ny + "px";
+        applySize(newSz);
+        return;
+      }
+    }, { signal: sig });
+
+    // ── Pointer up ────────────────────────────────────────────────────────
+
+    document.addEventListener("pointerup", () => {
+      if (!dragMode) return;
+      const moved   = dragMode === "move"   && hasMoved;
+      const resized = dragMode === "resize";
+      dragMode  = null;
+      resizeDir = "";
+      if (moved || resized) {
+        isAtHome = false;
+        saveSession();
+      }
+    }, { signal: sig });
+
+    // ── Hover tilt ────────────────────────────────────────────────────────
+
+    badge.addEventListener("pointermove", (e: PointerEvent) => {
+      if (dragMode) return;
+      hovering = true;
+      const rect = badge.getBoundingClientRect();
+      updateTilt(
+        (e.clientX - rect.left) / rect.width,
+        (e.clientY - rect.top)  / rect.height
+      );
+    });
+
+    badge.addEventListener("pointerleave", () => {
+      hovering = false;
+      badge.style.setProperty("--glare-opacity", "0");
+    });
+
+    // ── Ambient animation ─────────────────────────────────────────────────
+
+    function ambientFrame(ts: number) {
+      if (!startTs) startTs = ts;
+      const t = (ts - startTs) / 1000;
+
+      if (!hovering && !dragMode) {
+        badge.style.setProperty("--rx", (Math.sin(t * 0.38) * 2.8).toFixed(2) + "deg");
+        badge.style.setProperty("--ry", (Math.cos(t * 0.27) * 3.6).toFixed(2) + "deg");
+        const idle = (0.03 + Math.abs(Math.sin(t * 0.18)) * 0.07).toFixed(3);
+        badge.style.setProperty("--holo-opacity", idle);
+        badge.style.setProperty("--holo-angle",   (t * 12).toFixed(1) + "deg");
+      }
+
+      rafId = requestAnimationFrame(ambientFrame);
+    }
+    rafId = requestAnimationFrame(ambientFrame);
+
+    function updateTilt(x: number, y: number) {
+      badge.style.setProperty("--rx",  (-(y - 0.5) * 32).toFixed(1) + "deg");
+      badge.style.setProperty("--ry",   ((x - 0.5) * 32).toFixed(1) + "deg");
+      badge.style.setProperty("--mx",  (x * 100).toFixed(1) + "%");
+      badge.style.setProperty("--my",  (y * 100).toFixed(1) + "%");
+      if (holo) {
+        badge.style.setProperty("--holo-angle",
+          (Math.atan2(y - 0.5, x - 0.5) * (180 / Math.PI)).toFixed(1) + "deg");
+        badge.style.setProperty("--holo-opacity", "0.45");
+      }
+      badge.style.setProperty("--glare-opacity", "1");
+    }
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      ctrl.abort();
+    };
+  }
+
+  let _cleanup: (() => void) | null = null;
+
+  function setup() {
+    if (_cleanup) { _cleanup(); _cleanup = null; }
+    const r = initBadge();
+    _cleanup = r ?? null;
+  }
+
+  document.addEventListener("DOMContentLoaded", setup);
+  document.addEventListener("astro:after-swap",  setup);
+</script>

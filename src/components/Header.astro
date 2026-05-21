@@ -1,34 +1,73 @@
 ---
-import Container from "@components/Container.astro";
-import Link from "@components/Link.astro";
 import { SITE } from "@consts";
+const path = Astro.url.pathname;
 ---
 
 <header>
-  <Container>
-    <div class="flex flex-wrap gap-y-2 justify-between">
-      <Link href="/" underline={false}>
-        <div class="font-semibold">
-          {SITE.NAME}
-        </div>
-      </Link>
-      <nav class="flex gap-1">
-        <Link href="/blog">
-          blog
-        </Link>
-        <span>
-          {`/`}
-        </span>
-        <Link href="/work">
-          work
-        </Link>
-        <span>
-          {`/`}
-        </span>
-        <Link href="/projects">
-          projects
-        </Link>
+  <div class="mx-auto max-w-4xl px-5 md:px-8">
+    <div class="flex flex-wrap items-center justify-between gap-y-2">
+
+      <!-- Zero-height spacer: reserves horizontal space for the floating badge
+           that lives outside the header in PageLayout.astro. Width matches the
+           badge's default size so nav items don't overlap it. -->
+      <div id="badge-anchor" class="badge-spacer" aria-hidden="true"></div>
+
+      <nav class="flex flex-wrap items-center gap-5 md:gap-7">
+        {[
+          { href: "/",         label: "Home",     exact: true  },
+          { href: "/blog",     label: "Blog",     exact: false },
+          { href: "/projects", label: "Projects", exact: false },
+          { href: "/work",     label: "CV",        exact: false },
+          { href: "/contact",  label: "Contact",  exact: false },
+        ].map(({ href, label, exact }) => {
+          const active = exact ? path === href : path.startsWith(href);
+          return (
+            <a
+              href={href}
+              class={`font-sans font-bold text-xs uppercase tracking-widest transition-all duration-200 ${
+                active
+                  ? "text-white underline underline-offset-4 decoration-2"
+                  : "text-white/70 hover:text-white"
+              }`}
+            >
+              {label}
+            </a>
+          );
+        })}
+
+        <!-- Score indicator: naked pixel-font number in a box.
+             Content is set by ScoreTracker.astro JS; hidden until populated. -->
+        <span id="score-display" class="score-box" aria-hidden="true"></span>
       </nav>
     </div>
-  </Container>
+  </div>
 </header>
+
+<style>
+  /* Badge spacer: takes horizontal space but no vertical height */
+  .badge-spacer {
+    width: 80px;
+    height: 0;
+    flex-shrink: 0;
+  }
+
+  /* Keep the header's own overflow visible so the badge glow can spill out */
+  header {
+    overflow: visible;
+  }
+
+  /* Score box — visually subordinate but readable */
+  .score-box {
+    font-family: "Press Start 2P", monospace;
+    font-size: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    padding: 3px 7px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    display: none; /* hidden until JS writes the score */
+  }
+  .score-box:not(:empty) {
+    display: inline-block;
+  }
+</style>
