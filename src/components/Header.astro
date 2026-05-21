@@ -1,6 +1,5 @@
 ---
 import { SITE } from "@consts";
-import MejBadge from "@components/MejBadge.astro";
 const path = Astro.url.pathname;
 ---
 
@@ -8,8 +7,10 @@ const path = Astro.url.pathname;
   <div class="mx-auto max-w-4xl px-5 md:px-8">
     <div class="flex flex-wrap items-center justify-between gap-y-2">
 
-      <!-- Badge lives here as the site logo on every page -->
-      <MejBadge />
+      <!-- Zero-height spacer: reserves horizontal space for the floating badge
+           that lives outside the header in PageLayout.astro. Width matches the
+           badge's default size so nav items don't overlap it. -->
+      <div id="badge-anchor" class="badge-spacer" aria-hidden="true"></div>
 
       <nav class="flex flex-wrap items-center gap-5 md:gap-7">
         {[
@@ -43,6 +44,13 @@ const path = Astro.url.pathname;
 </header>
 
 <style>
+  /* Badge spacer: takes horizontal space but no vertical height */
+  .badge-spacer {
+    width: 80px;
+    height: 0;
+    flex-shrink: 0;
+  }
+
   /* Keep the header's own overflow visible so the badge glow can spill out */
   header {
     overflow: visible;

@@ -8,7 +8,7 @@
   <div class="mej-handle" data-handle="sw" aria-hidden="true"></div>
   <div class="mej-handle" data-handle="se" aria-hidden="true"></div>
 
-  <!-- Breathing glow behind the badge -->
+  <!-- Breathing glow -->
   <div class="mej-glow" aria-hidden="true"></div>
 
   <div class="mej-badge" id="mej-badge" role="img" aria-label="MEJ badge">
@@ -22,6 +22,8 @@
 </div>
 
 <style>
+  /* The wrap starts as inline-flex; JS immediately overrides to position:fixed.
+     Keeping position:relative here prevents a layout flash before JS runs. */
   .mej-badge-wrap {
     position: relative;
     display: inline-flex;
@@ -35,7 +37,6 @@
     outline: 2px dashed rgba(0, 0, 0, 0.55);
     outline-offset: 8px;
   }
-
   .mej-badge-wrap.mej-selected .mej-badge {
     cursor: grab;
   }
@@ -52,19 +53,17 @@
     z-index: 20;
     touch-action: none;
   }
-
   .mej-badge-wrap.mej-selected .mej-handle { display: block; }
+  .mej-handle[data-handle="nw"] { top: -5px;    left: -5px;  cursor: nw-resize; }
+  .mej-handle[data-handle="ne"] { top: -5px;    right: -5px; cursor: ne-resize; }
+  .mej-handle[data-handle="sw"] { bottom: -5px; left: -5px;  cursor: sw-resize; }
+  .mej-handle[data-handle="se"] { bottom: -5px; right: -5px; cursor: se-resize; }
 
-  .mej-handle[data-handle="nw"] { top: -5px;    left: -5px;   cursor: nw-resize; }
-  .mej-handle[data-handle="ne"] { top: -5px;    right: -5px;  cursor: ne-resize; }
-  .mej-handle[data-handle="sw"] { bottom: -5px; left: -5px;   cursor: sw-resize; }
-  .mej-handle[data-handle="se"] { bottom: -5px; right: -5px;  cursor: se-resize; }
-
-  /* ---- Breathing glow ---- */
+  /* ---- Glow ---- */
 
   .mej-glow {
     position: absolute;
-    inset: -17px;
+    inset: -21px;
     border-radius: 50%;
     background: radial-gradient(
       circle at center,
@@ -100,8 +99,8 @@
 
   .mej-badge__face {
     position: relative;
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     border: 3px solid #000;
     box-shadow: 5px 5px 0 #000;
@@ -125,18 +124,13 @@
     box-shadow: 8px 14px 24px rgba(0, 0, 0, 0.25), 5px 5px 0 #000;
   }
 
-  /* Rainbow holographic layer */
   .mej-badge__holo {
     position: absolute;
     inset: -30%;
     background: conic-gradient(
       from var(--holo-angle) at 50% 50%,
-      #ff006e 0%,
-      #fb5607 14%,
-      #ffbe0b 28%,
-      #3a86ff 50%,
-      #8338ec 64%,
-      #ff006e 100%
+      #ff006e 0%, #fb5607 14%, #ffbe0b 28%,
+      #3a86ff 50%, #8338ec 64%, #ff006e 100%
     );
     mix-blend-mode: color-dodge;
     opacity: var(--holo-opacity);
@@ -144,7 +138,6 @@
     border-radius: 50%;
   }
 
-  /* Mouse-tracking glare */
   .mej-badge__glare {
     position: absolute;
     inset: 0;
@@ -160,17 +153,14 @@
     pointer-events: none;
   }
 
-  /* 8-bit CRT scanlines */
   .mej-badge__scanlines {
     position: absolute;
     inset: 0;
     border-radius: 50%;
     background: repeating-linear-gradient(
       0deg,
-      transparent 0px,
-      transparent 3px,
-      rgba(0, 0, 0, 0.07) 3px,
-      rgba(0, 0, 0, 0.07) 4px
+      transparent 0px, transparent 3px,
+      rgba(0, 0, 0, 0.07) 3px, rgba(0, 0, 0, 0.07) 4px
     );
     pointer-events: none;
     z-index: 2;
@@ -189,23 +179,19 @@
   }
 
   @media (max-width: 640px) {
-    .mej-badge__face { width: 52px; height: 52px; }
+    .mej-badge__face { width: 64px; height: 64px; }
     .mej-badge__text { font-size: 0.9rem; }
-    .mej-glow        { inset: -14px; }
+    .mej-glow        { inset: -17px; }
   }
 </style>
 
 <script>
-  // ── Before each page swap: remove any detached badge from body ──────────
-  // (Astro's ViewTransitions replaces <body> content, but a reparented
-  //  element appended directly to <body> may or may not survive — clean it
-  //  up proactively to prevent orphaned duplicates.)
+  // Cancel any running RAF before the page swap to avoid animating
+  // detached elements during the Astro ViewTransition.
   document.addEventListener("astro:before-swap", () => {
-    const w = document.getElementById("mej-badge-wrap");
-    if (w?.parentElement === document.body) w.remove();
+    if (_cleanup) { _cleanup(); _cleanup = null; }
   });
 
-  // ── Main badge logic ────────────────────────────────────────────────────
   function initBadge() {
     const wrap  = document.getElementById("mej-badge-wrap") as HTMLElement | null;
     const badge = document.getElementById("mej-badge")      as HTMLElement | null;
@@ -217,15 +203,17 @@
     const glowEl = wrap.querySelector(".mej-glow")         as HTMLElement | null;
     if (!face) return;
 
+    // ── Constants ─────────────────────────────────────────────────────────
     const SK_X    = "mejBadge_x";
     const SK_Y    = "mejBadge_y";
     const SK_SIZE = "mejBadge_size";
-    const MIN_SZ  = 40;   // no upper cap — user can resize freely
-    const DEF_SZ  = 64;
+    const MIN_SZ  = 40;   // no upper cap — user resizes freely
+    const DEF_SZ  = 80;
 
+    // ── State ──────────────────────────────────────────────────────────────
     let hovering  = false;
     let selected  = false;
-    let detached  = false;
+    let isAtHome  = true;   // true → re-anchor on window resize
     let dragMode: null | "move" | "resize" = null;
     let resizeDir = "";
     let rafId     = 0;
@@ -241,45 +229,39 @@
     const ctrl = new AbortController();
     const sig  = ctrl.signal;
 
-    function clamp(v: number, lo: number, hi: number = Infinity) {
-      return Math.max(lo, Math.min(hi, v));
-    }
-
-    // ── Reparent wrap to body so position:fixed is viewport-relative ──────
-    // The badge lives inside an .animate div whose Tailwind transform
-    // (translate-y-0 after reveal) creates a new CSS containing block,
-    // making position:fixed children position relative to that ancestor
-    // instead of the viewport. Moving to body fixes this.
-    function detachToBody(srcRect: DOMRect) {
-      detached = true;
-      const cx = clamp(srcRect.left, 0, window.innerWidth  - curSize);
-      const cy = clamp(srcRect.top,  0, window.innerHeight - curSize);
-      // Reparent first — then style. Reading rect before reparent is correct
-      // because getBoundingClientRect always returns viewport coords.
-      document.body.appendChild(wrap);
-      wrap.style.position = "fixed";
-      wrap.style.left     = cx + "px";
-      wrap.style.top      = cy + "px";
-      wrap.style.zIndex   = "9000";
-      wrap.style.margin   = "0";
-    }
-
-    function ensureDetached() {
-      if (detached) return;
-      const r = wrap.getBoundingClientRect(); // capture BEFORE DOM move
-      detachToBody(r);
-    }
+    // ── Helpers ────────────────────────────────────────────────────────────
 
     function applySize(sz: number) {
-      curSize = clamp(sz, MIN_SZ);
+      curSize = Math.max(MIN_SZ, sz);
       face.style.width  = curSize + "px";
       face.style.height = curSize + "px";
       if (textEl) textEl.style.fontSize = ((1.1 * curSize) / DEF_SZ).toFixed(3) + "rem";
       if (glowEl) glowEl.style.inset    = -Math.round(curSize * 0.267) + "px";
     }
 
+    // Compute the badge's "home" position: left-aligned with the header's
+    // inner padding, and inset ~4 px from the header top so the badge
+    // hangs visibly below the nav bar.
+    function computeHome(): { x: number; y: number } {
+      const anchor = document.getElementById("badge-anchor");
+      const header = document.querySelector("header");
+      if (!anchor || !header) return { x: 8, y: 4 };
+      const aRect = anchor.getBoundingClientRect();
+      const hRect = header.getBoundingClientRect();
+      return {
+        x: aRect.left,
+        y: hRect.top + 4,
+      };
+    }
+
+    function goHome() {
+      const { x, y } = computeHome();
+      wrap.style.left = x + "px";
+      wrap.style.top  = y + "px";
+      isAtHome = true;
+    }
+
     function saveSession() {
-      if (!detached) return;
       const r = wrap.getBoundingClientRect();
       sessionStorage.setItem(SK_X,    String(Math.round(r.left)));
       sessionStorage.setItem(SK_Y,    String(Math.round(r.top)));
@@ -291,26 +273,36 @@
       wrap.classList.toggle("mej-selected", on);
     }
 
-    // ── Restore from sessionStorage ───────────────────────────────────────
-    {
-      const sx = sessionStorage.getItem(SK_X);
-      const sy = sessionStorage.getItem(SK_Y);
-      const ss = sessionStorage.getItem(SK_SIZE);
-      if (sx !== null && sy !== null) {
-        curSize = ss ? clamp(+ss, MIN_SZ, MAX_SZ) : DEF_SZ;
-        applySize(curSize);
-        // Fake a rect at the saved position so detachToBody places it correctly
-        detachToBody({
-          left: +sx, top: +sy,
-          right: +sx + curSize, bottom: +sy + curSize,
-          width: curSize, height: curSize,
-          x: +sx, y: +sy,
-          toJSON: () => {},
-        } as DOMRect);
-      }
+    // ── Position badge ─────────────────────────────────────────────────────
+    // The badge is a direct <body> child (placed by PageLayout.astro), so
+    // position:fixed is always relative to the viewport — no reparenting needed.
+    wrap.style.position = "fixed";
+    wrap.style.zIndex   = "60";
+    wrap.style.margin   = "0";
+
+    const sx = sessionStorage.getItem(SK_X);
+    const sy = sessionStorage.getItem(SK_Y);
+    const ss = sessionStorage.getItem(SK_SIZE);
+
+    if (sx !== null && sy !== null) {
+      // Restore saved position (badge was explicitly moved by user)
+      isAtHome = false;
+      applySize(ss ? Math.max(MIN_SZ, +ss) : DEF_SZ);
+      wrap.style.left = +sx + "px";
+      wrap.style.top  = +sy + "px";
+    } else {
+      // Default: anchor to header
+      applySize(DEF_SZ);
+      goHome();
     }
 
+    // Re-anchor on resize if user hasn't moved the badge
+    window.addEventListener("resize", () => {
+      if (isAtHome) goHome();
+    }, { signal: sig });
+
     // ── Select / deselect ─────────────────────────────────────────────────
+
     badge.addEventListener("click", (e: MouseEvent) => {
       if (hasMoved) { hasMoved = false; return; }
       e.stopPropagation();
@@ -325,35 +317,30 @@
       if (e.key === "Escape") setSelected(false);
     }, { signal: sig });
 
-    // ── Drag: move badge body ─────────────────────────────────────────────
+    // ── Drag: move badge ──────────────────────────────────────────────────
+
     badge.addEventListener("pointerdown", (e: PointerEvent) => {
       if (!selected) return;
       e.preventDefault();
       e.stopPropagation();
       badge.setPointerCapture(e.pointerId);
-
       hovering  = false;
       hasMoved  = false;
       ptrStartX = e.clientX;
       ptrStartY = e.clientY;
-
-      ensureDetached();
-
-      const r    = wrap.getBoundingClientRect();
+      const r   = wrap.getBoundingClientRect();
       elemStartX = r.left;
       elemStartY = r.top;
       dragMode   = "move";
     });
 
     // ── Drag: resize via corner handles ───────────────────────────────────
+
     wrap.querySelectorAll<HTMLElement>(".mej-handle").forEach(h => {
       h.addEventListener("pointerdown", (e: PointerEvent) => {
         e.preventDefault();
         e.stopPropagation();
         h.setPointerCapture(e.pointerId);
-
-        ensureDetached();
-
         ptrStartX   = e.clientX;
         ptrStartY   = e.clientY;
         sizeAtStart = curSize;
@@ -365,6 +352,7 @@
     });
 
     // ── Pointer move ──────────────────────────────────────────────────────
+
     document.addEventListener("pointermove", (e: PointerEvent) => {
       if (dragMode === "move") {
         const dx = e.clientX - ptrStartX;
@@ -383,17 +371,16 @@
         let ny = posAtStart.y;
 
         if (resizeDir === "se") {
-          newSz = clamp(sizeAtStart + (dx + dy) / 2, MIN_SZ);
-          // top-left stays fixed
+          newSz = Math.max(MIN_SZ, sizeAtStart + (dx + dy) / 2);
         } else if (resizeDir === "nw") {
-          newSz = clamp(sizeAtStart + (-dx - dy) / 2, MIN_SZ);
+          newSz = Math.max(MIN_SZ, sizeAtStart + (-dx - dy) / 2);
           nx = posAtStart.x + sizeAtStart - newSz; // bottom-right stays fixed
           ny = posAtStart.y + sizeAtStart - newSz;
         } else if (resizeDir === "ne") {
-          newSz = clamp(sizeAtStart + (dx - dy) / 2, MIN_SZ);
+          newSz = Math.max(MIN_SZ, sizeAtStart + (dx - dy) / 2);
           ny = posAtStart.y + sizeAtStart - newSz; // bottom-left stays fixed
         } else { // sw
-          newSz = clamp(sizeAtStart + (-dx + dy) / 2, MIN_SZ);
+          newSz = Math.max(MIN_SZ, sizeAtStart + (-dx + dy) / 2);
           nx = posAtStart.x + sizeAtStart - newSz; // top-right stays fixed
         }
 
@@ -405,15 +392,21 @@
     }, { signal: sig });
 
     // ── Pointer up ────────────────────────────────────────────────────────
+
     document.addEventListener("pointerup", () => {
-      if (dragMode) {
-        dragMode  = null;
-        resizeDir = "";
+      if (!dragMode) return;
+      const moved   = dragMode === "move"   && hasMoved;
+      const resized = dragMode === "resize";
+      dragMode  = null;
+      resizeDir = "";
+      if (moved || resized) {
+        isAtHome = false;
         saveSession();
       }
     }, { signal: sig });
 
     // ── Hover tilt ────────────────────────────────────────────────────────
+
     badge.addEventListener("pointermove", (e: PointerEvent) => {
       if (dragMode) return;
       hovering = true;
@@ -430,6 +423,7 @@
     });
 
     // ── Ambient animation ─────────────────────────────────────────────────
+
     function ambientFrame(ts: number) {
       if (!startTs) startTs = ts;
       const t = (ts - startTs) / 1000;
