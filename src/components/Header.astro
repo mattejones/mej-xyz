@@ -25,12 +25,31 @@ const path = Astro.url.pathname;
             {label}
           </a>
         ))}
+        <span
+          id="score-display"
+          class="score-display"
+          aria-hidden="true"
+        ></span>
       </nav>
     </div>
   </div>
 </header>
 
 <style>
+  .score-display {
+    font-family: "Press Start 2P", monospace;
+    font-size: 0.5rem;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 0.04em;
+    min-width: 2ch;
+    text-align: right;
+    /* Hide until JS populates — avoids a flash of "0" on first load */
+    display: none;
+  }
+  .score-display:not(:empty) {
+    display: inline;
+  }
+
   .nav-mej {
     font-family: "Press Start 2P", monospace;
     font-size: 0.8rem;

@@ -196,6 +196,16 @@
 </style>
 
 <script>
+  // ── Before each page swap: remove any detached badge from body ──────────
+  // (Astro's ViewTransitions replaces <body> content, but a reparented
+  //  element appended directly to <body> may or may not survive — clean it
+  //  up proactively to prevent orphaned duplicates.)
+  document.addEventListener("astro:before-swap", () => {
+    const w = document.getElementById("mej-badge-wrap");
+    if (w?.parentElement === document.body) w.remove();
+  });
+
+  // ── Main badge logic ────────────────────────────────────────────────────
   function initBadge() {
     const wrap  = document.getElementById("mej-badge-wrap") as HTMLElement | null;
     const badge = document.getElementById("mej-badge")      as HTMLElement | null;
@@ -236,27 +246,29 @@
       return Math.max(lo, Math.min(hi, v));
     }
 
-    // ── Restore session ─────────────────────────────────────────────────
-    {
-      const sx = sessionStorage.getItem(SK_X);
-      const sy = sessionStorage.getItem(SK_Y);
-      const ss = sessionStorage.getItem(SK_SIZE);
-      if (sx !== null && sy !== null) {
-        curSize = ss ? +ss : DEF_SZ;
-        attachFixed(+sx, +sy, curSize);
-      }
-    }
-
-    function attachFixed(x: number, y: number, size: number) {
+    // ── Reparent wrap to body so position:fixed is viewport-relative ──────
+    // The badge lives inside an .animate div whose Tailwind transform
+    // (translate-y-0 after reveal) creates a new CSS containing block,
+    // making position:fixed children position relative to that ancestor
+    // instead of the viewport. Moving to body fixes this.
+    function detachToBody(srcRect: DOMRect) {
       detached = true;
-      const cx = clamp(x, 0, window.innerWidth  - size);
-      const cy = clamp(y, 0, window.innerHeight - size);
+      const cx = clamp(srcRect.left, 0, window.innerWidth  - curSize);
+      const cy = clamp(srcRect.top,  0, window.innerHeight - curSize);
+      // Reparent first — then style. Reading rect before reparent is correct
+      // because getBoundingClientRect always returns viewport coords.
+      document.body.appendChild(wrap);
       wrap.style.position = "fixed";
       wrap.style.left     = cx + "px";
       wrap.style.top      = cy + "px";
       wrap.style.zIndex   = "9000";
       wrap.style.margin   = "0";
-      applySize(size);
+    }
+
+    function ensureDetached() {
+      if (detached) return;
+      const r = wrap.getBoundingClientRect(); // capture BEFORE DOM move
+      detachToBody(r);
     }
 
     function applySize(sz: number) {
@@ -280,7 +292,26 @@
       wrap.classList.toggle("mej-selected", on);
     }
 
-    // ── Select / deselect ───────────────────────────────────────────────
+    // ── Restore from sessionStorage ───────────────────────────────────────
+    {
+      const sx = sessionStorage.getItem(SK_X);
+      const sy = sessionStorage.getItem(SK_Y);
+      const ss = sessionStorage.getItem(SK_SIZE);
+      if (sx !== null && sy !== null) {
+        curSize = ss ? clamp(+ss, MIN_SZ, MAX_SZ) : DEF_SZ;
+        applySize(curSize);
+        // Fake a rect at the saved position so detachToBody places it correctly
+        detachToBody({
+          left: +sx, top: +sy,
+          right: +sx + curSize, bottom: +sy + curSize,
+          width: curSize, height: curSize,
+          x: +sx, y: +sy,
+          toJSON: () => {},
+        } as DOMRect);
+      }
+    }
+
+    // ── Select / deselect ─────────────────────────────────────────────────
     badge.addEventListener("click", (e: MouseEvent) => {
       if (hasMoved) { hasMoved = false; return; }
       e.stopPropagation();
@@ -295,7 +326,7 @@
       if (e.key === "Escape") setSelected(false);
     }, { signal: sig });
 
-    // ── Drag: move ──────────────────────────────────────────────────────
+    // ── Drag: move badge body ─────────────────────────────────────────────
     badge.addEventListener("pointerdown", (e: PointerEvent) => {
       if (!selected) return;
       e.preventDefault();
@@ -307,15 +338,7 @@
       ptrStartX = e.clientX;
       ptrStartY = e.clientY;
 
-      if (!detached) {
-        const r = wrap.getBoundingClientRect();
-        wrap.style.position = "fixed";
-        wrap.style.left     = r.left + "px";
-        wrap.style.top      = r.top  + "px";
-        wrap.style.zIndex   = "9000";
-        wrap.style.margin   = "0";
-        detached = true;
-      }
+      ensureDetached();
 
       const r    = wrap.getBoundingClientRect();
       elemStartX = r.left;
@@ -323,22 +346,14 @@
       dragMode   = "move";
     });
 
-    // ── Drag: resize ────────────────────────────────────────────────────
+    // ── Drag: resize via corner handles ───────────────────────────────────
     wrap.querySelectorAll<HTMLElement>(".mej-handle").forEach(h => {
       h.addEventListener("pointerdown", (e: PointerEvent) => {
         e.preventDefault();
         e.stopPropagation();
         h.setPointerCapture(e.pointerId);
 
-        if (!detached) {
-          const r = wrap.getBoundingClientRect();
-          wrap.style.position = "fixed";
-          wrap.style.left     = r.left + "px";
-          wrap.style.top      = r.top  + "px";
-          wrap.style.zIndex   = "9000";
-          wrap.style.margin   = "0";
-          detached = true;
-        }
+        ensureDetached();
 
         ptrStartX   = e.clientX;
         ptrStartY   = e.clientY;
@@ -350,42 +365,37 @@
       });
     });
 
-    // ── Pointer move ────────────────────────────────────────────────────
+    // ── Pointer move ──────────────────────────────────────────────────────
     document.addEventListener("pointermove", (e: PointerEvent) => {
       if (dragMode === "move") {
         const dx = e.clientX - ptrStartX;
         const dy = e.clientY - ptrStartY;
         if (!hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) hasMoved = true;
-        const nx = clamp(elemStartX + dx, -curSize + 20, window.innerWidth  - 20);
-        const ny = clamp(elemStartY + dy, -curSize + 20, window.innerHeight - 20);
-        wrap.style.left = nx + "px";
-        wrap.style.top  = ny + "px";
+        wrap.style.left = clamp(elemStartX + dx, -curSize + 20, window.innerWidth  - 20) + "px";
+        wrap.style.top  = clamp(elemStartY + dy, -curSize + 20, window.innerHeight - 20) + "px";
         return;
       }
 
       if (dragMode === "resize") {
         const dx = e.clientX - ptrStartX;
         const dy = e.clientY - ptrStartY;
-
         let newSz: number;
         let nx = posAtStart.x;
         let ny = posAtStart.y;
 
         if (resizeDir === "se") {
           newSz = clamp(sizeAtStart + (dx + dy) / 2, MIN_SZ, MAX_SZ);
-          // top-left anchored — nx/ny unchanged
+          // top-left stays fixed
         } else if (resizeDir === "nw") {
           newSz = clamp(sizeAtStart + (-dx - dy) / 2, MIN_SZ, MAX_SZ);
-          nx = posAtStart.x + sizeAtStart - newSz;
+          nx = posAtStart.x + sizeAtStart - newSz; // bottom-right stays fixed
           ny = posAtStart.y + sizeAtStart - newSz;
         } else if (resizeDir === "ne") {
           newSz = clamp(sizeAtStart + (dx - dy) / 2, MIN_SZ, MAX_SZ);
-          ny = posAtStart.y + sizeAtStart - newSz;
-          // nx (left) unchanged
+          ny = posAtStart.y + sizeAtStart - newSz; // bottom-left stays fixed
         } else { // sw
           newSz = clamp(sizeAtStart + (-dx + dy) / 2, MIN_SZ, MAX_SZ);
-          nx = posAtStart.x + sizeAtStart - newSz;
-          // ny (top) unchanged
+          nx = posAtStart.x + sizeAtStart - newSz; // top-right stays fixed
         }
 
         wrap.style.left = nx + "px";
@@ -395,7 +405,7 @@
       }
     }, { signal: sig });
 
-    // ── Pointer up ──────────────────────────────────────────────────────
+    // ── Pointer up ────────────────────────────────────────────────────────
     document.addEventListener("pointerup", () => {
       if (dragMode) {
         dragMode  = null;
@@ -404,7 +414,7 @@
       }
     }, { signal: sig });
 
-    // ── Hover tilt ──────────────────────────────────────────────────────
+    // ── Hover tilt ────────────────────────────────────────────────────────
     badge.addEventListener("pointermove", (e: PointerEvent) => {
       if (dragMode) return;
       hovering = true;
@@ -420,7 +430,7 @@
       badge.style.setProperty("--glare-opacity", "0");
     });
 
-    // ── Ambient animation ────────────────────────────────────────────────
+    // ── Ambient animation ─────────────────────────────────────────────────
     function ambientFrame(ts: number) {
       if (!startTs) startTs = ts;
       const t = (ts - startTs) / 1000;
@@ -443,7 +453,8 @@
       badge.style.setProperty("--mx",  (x * 100).toFixed(1) + "%");
       badge.style.setProperty("--my",  (y * 100).toFixed(1) + "%");
       if (holo) {
-        badge.style.setProperty("--holo-angle",   (Math.atan2(y - 0.5, x - 0.5) * (180 / Math.PI)).toFixed(1) + "deg");
+        badge.style.setProperty("--holo-angle",
+          (Math.atan2(y - 0.5, x - 0.5) * (180 / Math.PI)).toFixed(1) + "deg");
         badge.style.setProperty("--holo-opacity", "0.45");
       }
       badge.style.setProperty("--glare-opacity", "1");
@@ -464,5 +475,5 @@
   }
 
   document.addEventListener("DOMContentLoaded", setup);
-  document.addEventListener("astro:after-swap", setup);
+  document.addEventListener("astro:after-swap",  setup);
 </script>

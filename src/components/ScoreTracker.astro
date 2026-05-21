@@ -1,0 +1,158 @@
+---
+// No server-side rendering needed — this component is pure client-side script.
+---
+
+<script>
+  // ── Types ──────────────────────────────────────────────────────────────
+  interface ScoreState {
+    visits:        string[];
+    scrollPx:      number;
+    cursorPx:      number;
+    score:         number;
+    level:         number;
+    unlockedModes: string[];
+    activeMode:    string | null;
+  }
+
+  // ── Constants ──────────────────────────────────────────────────────────
+
+  const STORAGE_KEY = "mej_score_v1";
+
+  // Score contribution per input, tuned so a thorough single session
+  // (3–4 pages, solid read-through, some mousing around) lands around
+  // 80–120 pts. Exact thresholds can be rebalanced without touching
+  // unlockedModes because raw inputs are stored separately.
+  const VISIT_PTS      = 10;   // flat points per unique path visited
+  const SCROLL_FACTOR  = 0.5;  // floor(√scrollPx  * 0.50) — diminishing returns
+  const CURSOR_FACTOR  = 0.08; // floor(√cursorPx  * 0.08) — capped below
+  const CURSOR_CAP     = 40;   // max cursor contribution per lifetime
+
+  // Level thresholds (index = level number, value = min score)
+  const LEVEL_THRESHOLDS = [0, 25, 75, 175, 350, 600];
+
+  // ── State helpers ──────────────────────────────────────────────────────
+
+  function defaultState(): ScoreState {
+    return {
+      visits: [], scrollPx: 0, cursorPx: 0,
+      score: 0, level: 0,
+      unlockedModes: [], activeMode: null,
+    };
+  }
+
+  function loadState(): ScoreState {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      return { ...defaultState(), ...JSON.parse(raw) };
+    } catch {
+      return defaultState();
+    }
+  }
+
+  function saveState(s: ScoreState) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
+  }
+
+  function computeScore(s: ScoreState): number {
+    return (
+      s.visits.length * VISIT_PTS +
+      Math.floor(Math.sqrt(s.scrollPx) * SCROLL_FACTOR) +
+      Math.min(Math.floor(Math.sqrt(s.cursorPx) * CURSOR_FACTOR), CURSOR_CAP)
+    );
+  }
+
+  function computeLevel(score: number): number {
+    let lv = 0;
+    for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+      if (score >= LEVEL_THRESHOLDS[i]) lv = i;
+    }
+    return lv;
+  }
+
+  function updateDisplay(score: number) {
+    const el = document.getElementById("score-display");
+    if (el) el.textContent = String(score);
+  }
+
+  // ── Per-page init ──────────────────────────────────────────────────────
+
+  let cleanupTracking: (() => void) | null = null;
+
+  function initScoreTracking() {
+    if (cleanupTracking) { cleanupTracking(); cleanupTracking = null; }
+
+    const state = loadState();
+
+    // Record unique page visit
+    const path = window.location.pathname;
+    if (!state.visits.includes(path)) {
+      state.visits.push(path);
+    }
+
+    // Update score and display immediately
+    state.score = computeScore(state);
+    state.level = computeLevel(state.score);
+    saveState(state);
+    updateDisplay(state.score);
+
+    // ── Scroll tracking ──────────────────────────────────────────────────
+    let scrollAcc  = 0;
+    let lastScrollY = window.scrollY;
+    let scrollFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function onScroll() {
+      scrollAcc += Math.abs(window.scrollY - lastScrollY);
+      lastScrollY = window.scrollY;
+      scheduleFlush();
+    }
+
+    // ── Cursor tracking (desktop only) ───────────────────────────────────
+    let cursorAcc = 0;
+    let lastX = -1, lastY = -1;
+
+    function onPointerMove(e: PointerEvent) {
+      if (e.pointerType !== "mouse") return;
+      if (lastX < 0) { lastX = e.clientX; lastY = e.clientY; return; }
+      cursorAcc += Math.hypot(e.clientX - lastX, e.clientY - lastY);
+      lastX = e.clientX;
+      lastY = e.clientY;
+      scheduleFlush();
+    }
+
+    // ── Batched save: at most once every 2 s after any activity ──────────
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function scheduleFlush() {
+      if (flushTimer) clearTimeout(flushTimer);
+      flushTimer = setTimeout(flush, 2000);
+    }
+
+    function flush() {
+      flushTimer = null;
+      state.scrollPx += Math.round(scrollAcc);
+      state.cursorPx += Math.round(cursorAcc);
+      scrollAcc = 0;
+      cursorAcc = 0;
+      state.score = computeScore(state);
+      state.level = computeLevel(state.score);
+      saveState(state);
+      updateDisplay(state.score);
+    }
+
+    window.addEventListener("scroll",      onScroll,      { passive: true });
+    document.addEventListener("pointermove", onPointerMove, { passive: true });
+
+    cleanupTracking = () => {
+      window.removeEventListener("scroll",       onScroll);
+      document.removeEventListener("pointermove", onPointerMove);
+      if (flushTimer)    clearTimeout(flushTimer);
+      if (scrollFlushTimer) clearTimeout(scrollFlushTimer);
+      // Flush any remaining accumulation before cleanup
+      if (scrollAcc > 0 || cursorAcc > 0) flush();
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", initScoreTracking);
+  document.addEventListener("astro:after-swap",  initScoreTracking);
+</script>
