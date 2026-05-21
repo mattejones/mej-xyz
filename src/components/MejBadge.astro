@@ -208,7 +208,8 @@
     const SK_Y    = "mejBadge_y";
     const SK_SIZE = "mejBadge_size";
     const MIN_SZ  = 40;   // no upper cap — user resizes freely
-    const DEF_SZ  = 80;
+    // Smaller default on narrow viewports so it doesn't dominate the header
+    const DEF_SZ  = window.matchMedia("(max-width: 639px)").matches ? 56 : 80;
 
     // ── State ──────────────────────────────────────────────────────────────
     let hovering  = false;
@@ -239,15 +240,22 @@
       if (glowEl) glowEl.style.inset    = -Math.round(curSize * 0.267) + "px";
     }
 
-    // Compute the badge's "home" position: left-aligned with the header's
-    // inner padding, and inset ~4 px from the header top so the badge
-    // hangs visibly below the nav bar.
+    // Compute the badge's "home" position.
+    // Desktop: left-aligned with the header's inner padding (badge-anchor spacer).
+    // Mobile: right edge of viewport, so it doesn't overlap the nav links.
     function computeHome(): { x: number; y: number } {
-      const anchor = document.getElementById("badge-anchor");
       const header = document.querySelector("header");
-      if (!anchor || !header) return { x: 8, y: 4 };
-      const aRect = anchor.getBoundingClientRect();
+      if (!header) return { x: 8, y: 4 };
       const hRect = header.getBoundingClientRect();
+      if (window.innerWidth < 640) {
+        return {
+          x: window.innerWidth - curSize - 8,
+          y: hRect.top + 4,
+        };
+      }
+      const anchor = document.getElementById("badge-anchor");
+      if (!anchor) return { x: 8, y: 4 };
+      const aRect = anchor.getBoundingClientRect();
       return {
         x: aRect.left,
         y: hRect.top + 4,
@@ -285,11 +293,24 @@
     const ss = sessionStorage.getItem(SK_SIZE);
 
     if (sx !== null && sy !== null) {
-      // Restore saved position (badge was explicitly moved by user)
-      isAtHome = false;
+      // Restore saved position — but only if it's still on-screen.
+      // A position saved on desktop can be way off on a narrow mobile viewport.
       applySize(ss ? Math.max(MIN_SZ, +ss) : DEF_SZ);
-      wrap.style.left = +sx + "px";
-      wrap.style.top  = +sy + "px";
+      const inBounds =
+        +sx >= -curSize + 20 && +sx <= window.innerWidth  - 20 &&
+        +sy >= 0              && +sy <= window.innerHeight - 20;
+      if (inBounds) {
+        isAtHome = false;
+        wrap.style.left = +sx + "px";
+        wrap.style.top  = +sy + "px";
+      } else {
+        // Off-screen — clear the stale session and go home
+        sessionStorage.removeItem(SK_X);
+        sessionStorage.removeItem(SK_Y);
+        sessionStorage.removeItem(SK_SIZE);
+        applySize(DEF_SZ);
+        goHome();
+      }
     } else {
       // Default: anchor to header
       applySize(DEF_SZ);
