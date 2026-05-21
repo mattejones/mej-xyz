@@ -193,11 +193,11 @@
   });
 
   function initBadge() {
-    const wrap  = document.getElementById("mej-badge-wrap") as HTMLElement | null;
-    const badge = document.getElementById("mej-badge")      as HTMLElement | null;
+    const wrap  = document.getElementById("mej-badge-wrap") as HTMLElement;
+    const badge = document.getElementById("mej-badge")      as HTMLElement;
     if (!wrap || !badge) return;
 
-    const face   = badge.querySelector(".mej-badge__face") as HTMLElement | null;
+    const face   = badge.querySelector(".mej-badge__face") as HTMLElement;
     const holo   = badge.querySelector(".mej-badge__holo") as HTMLElement | null;
     const textEl = badge.querySelector(".mej-badge__text") as HTMLElement | null;
     const glowEl = wrap.querySelector(".mej-glow")         as HTMLElement | null;
