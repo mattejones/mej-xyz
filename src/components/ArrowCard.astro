@@ -42,6 +42,10 @@ const tags: string[] =
 </a>
 
 <style>
+  /* Comic Neue — open-source Comic Sans lookalike for Android / any device
+     that lacks Comic Sans MS as a system font. */
+  @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
+
   .nb-arrow-card {
     display: flex;
     align-items: center;
@@ -133,7 +137,7 @@ const tags: string[] =
       span.textContent = word;
       Object.assign(span.style, {
         position:   "absolute",
-        fontFamily: '"Comic Sans MS", "Comic Sans", cursive',
+        fontFamily: '"Comic Neue", "Comic Sans MS", "Comic Sans", cursive',
         fontSize:   rand(1.5, 3.2).toFixed(2) + "rem",
         fontWeight: "bold",
         color:      BRIGHT_COLOURS[Math.floor(Math.random() * BRIGHT_COLOURS.length)],
@@ -154,28 +158,40 @@ const tags: string[] =
       const descWrap  = card.querySelector<HTMLElement>(".card-desc");
       const tags: string[] = JSON.parse(card.dataset.tags ?? "[]");
 
-      card.addEventListener("mouseenter", () => {
-        // Regenerate word positions every hover
+      function showCloud() {
         if (bg) buildWordCloud(bg, tags);
-
-        // Scroll description if it overflows the container
+        if (bg) bg.style.opacity = "1";
         if (descInner && descWrap) {
           const overflow = descWrap.scrollWidth - descWrap.clientWidth;
           if (overflow > 10) {
-            // Duration scales with overflow length so it always feels gradual
             const dur = (2.5 + overflow / 80).toFixed(2);
             descInner.style.transition = `transform ${dur}s ease-in-out 0.5s`;
             descInner.style.transform  = `translateX(-${overflow}px)`;
           }
         }
-      });
+      }
 
-      card.addEventListener("mouseleave", () => {
+      function hideCloud() {
+        if (bg) bg.style.opacity = "0";
         if (descInner) {
           descInner.style.transition = "transform 0.3s ease";
           descInner.style.transform  = "translateX(0)";
         }
-      });
+      }
+
+      // Mouse (desktop hover)
+      card.addEventListener("mouseenter", showCloud);
+      card.addEventListener("mouseleave", hideCloud);
+
+      // Touch (mobile tap-and-hold or tap toggle)
+      let touchTimer: ReturnType<typeof setTimeout> | null = null;
+      card.addEventListener("touchstart", () => {
+        touchTimer = setTimeout(showCloud, 120); // slight delay to avoid accidental trigger
+      }, { passive: true });
+      card.addEventListener("touchend", () => {
+        if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+        setTimeout(hideCloud, 600); // keep visible briefly so user can see it
+      }, { passive: true });
     });
   }
 

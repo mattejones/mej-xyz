@@ -43,11 +43,15 @@ const path = Astro.url.pathname;
 </header>
 
 <style>
-  /* Badge spacer: takes horizontal space but no vertical height */
+  /* Badge spacer: takes horizontal space but no vertical height.
+     On mobile the badge lives on the RIGHT, so no space is needed here. */
   .badge-spacer {
     width: 80px;
     height: 0;
     flex-shrink: 0;
+  }
+  @media (max-width: 639px) {
+    .badge-spacer { width: 0; }
   }
 
   /* Keep the header's own overflow visible so the badge glow can spill out */
