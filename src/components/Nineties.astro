@@ -1,6 +1,7 @@
 ---
 // Nineties.astro — 90s unlockable experience overlay
 // Activated when score >= UNLOCK_SCORE. Pure client-side, no server props needed.
+// Toggle button lives in Footer.astro (#nineties-toggle-btn); this script wires it.
 ---
 
 <script>
@@ -13,23 +14,71 @@
   function loadState(): any {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return {};
-      return { unlockedModes: [] as string[], activeMode: null as string | null, score: 0, ...JSON.parse(raw) };
-    } catch { return {}; }
+      if (!raw) return { score: 0, unlockedModes: [], activeMode: null };
+      return { score: 0, unlockedModes: [] as string[], activeMode: null as string | null, ...JSON.parse(raw) };
+    } catch {
+      return { score: 0, unlockedModes: [], activeMode: null };
+    }
   }
 
   function saveState(s: any) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
   }
 
+  // ── Toggle button (in Footer.astro) ───────────────────────────────────
+
+  function updateToggleButton(state: any) {
+    const btn = document.getElementById("nineties-toggle-btn") as HTMLButtonElement | null;
+    if (!btn) return;
+
+    const unlocked = Array.isArray(state.unlockedModes) && state.unlockedModes.includes(NINETIES_KEY);
+    const active   = state.activeMode === NINETIES_KEY;
+
+    if (!unlocked) {
+      btn.disabled     = true;
+      btn.textContent  = "90s: 🔒";
+      btn.title        = `Unlocks at ${UNLOCK_SCORE} points`;
+      btn.classList.remove("nb-toggle-pressed");
+      return;
+    }
+
+    btn.disabled    = false;
+    btn.title       = active ? "Disable 90s mode" : "Enable 90s mode";
+    btn.textContent = active ? "90s: on" : "90s: off";
+    if (active) {
+      btn.classList.add("nb-toggle-pressed");
+    } else {
+      btn.classList.remove("nb-toggle-pressed");
+    }
+  }
+
+  function wireToggleButton() {
+    const btn = document.getElementById("nineties-toggle-btn");
+    if (!btn || btn.dataset.ninetiesWired) return;
+    btn.dataset.ninetiesWired = "1";
+
+    btn.addEventListener("click", () => {
+      const s      = loadState();
+      const wasOn  = s.activeMode === NINETIES_KEY;
+      s.activeMode = wasOn ? null : NINETIES_KEY;
+      saveState(s);
+      if (wasOn) {
+        removeNinetiesMode(s);
+      } else {
+        applyNinetiesMode();
+        updateToggleButton(s);
+      }
+    });
+  }
+
   // ── DOM injections ────────────────────────────────────────────────────
 
   function injectMarquee() {
     if (document.getElementById("nineties-marquee")) return;
-    const state = loadState();
+    const state      = loadState();
     const visitorNum = String(Math.max(1337, (state.score ?? 0) * 7 + 1337)).padStart(6, "0");
-    const el = document.createElement("div");
-    el.id = "nineties-marquee";
+    const el         = document.createElement("div");
+    el.id            = "nineties-marquee";
     el.innerHTML =
       `<marquee scrollamount="3">` +
       `★ WELCOME TO MEJ.XYZ ★ LAST UPDATED: TODAY ★ ` +
@@ -44,12 +93,12 @@
 
   function injectFooterStrip() {
     if (document.getElementById("nineties-footer")) return;
-    const state = loadState();
+    const state      = loadState();
     const visitorNum = String(Math.max(1337, (state.score ?? 0) * 7 + 1337)).padStart(6, "0");
-    const nobgHref = window.location.pathname + "?nobg=1";
+    const nobgHref   = window.location.pathname + "?nobg=1";
 
     const el = document.createElement("div");
-    el.id = "nineties-footer";
+    el.id    = "nineties-footer";
     el.innerHTML = `
       <div class="nineties-constbig">
         <img src="/90s/constbig.gif" alt="Under Construction">
@@ -65,12 +114,12 @@
       </div>
 
       <div class="nineties-counter-row">
-        <img src="/90s/typloop.gif"    alt="Typing computer" class="nineties-typloop">
+        <img src="/90s/typloop.gif"     alt="Typing computer"  class="nineties-typloop">
         <div class="nineties-counter-text">
-          <img src="/90s/vcounter.gif" alt="visitor counter digit display">
+          <img src="/90s/vcounter.gif"  alt="visitor counter">
           <br>YOU ARE VISITOR #${visitorNum}
         </div>
-        <img src="/90s/dancing-aim.gif" alt="Dancing AIM guy" class="nineties-dancing">
+        <img src="/90s/dancing-aim.gif" alt="Dancing AIM guy"  class="nineties-dancing">
       </div>
 
       <div class="nineties-disclaimer">
@@ -82,43 +131,31 @@
           <img src="/90s/modem.gif" alt="56K Modem">
           [ click here for low-bandwidth / no-background version ]
         </a>
-        <br><br>
-        <button id="nineties-off-btn" class="nineties-off-btn">
-          [ disable 90s mode ]
-        </button>
       </div>
     `;
 
     const footer = document.querySelector("footer");
     if (footer) footer.insertAdjacentElement("afterend", el);
-
-    // Disable button handler
-    document.getElementById("nineties-off-btn")?.addEventListener("click", () => {
-      const s = loadState();
-      s.activeMode = null;
-      saveState(s);
-      removeNinetiesMode();
-    });
   }
 
   function replaceHRs() {
     document.querySelectorAll("main hr").forEach(hr => {
-      const img = document.createElement("img");
-      img.src    = "/90s/hr-gif-car-line.gif";
-      img.alt    = "────────────────────────";
+      const img     = document.createElement("img");
+      img.src       = "/90s/hr-gif-car-line.gif";
+      img.alt       = "────────────────────────";
       img.className = "nineties-hr";
       hr.replaceWith(img);
     });
   }
 
   function injectNewBadges() {
-    const now = Date.now();
+    const now       = Date.now();
     const ninetyDays = 90 * 24 * 60 * 60 * 1000;
     document.querySelectorAll<HTMLElement>("[data-pubdate]").forEach(el => {
       const d = el.getAttribute("data-pubdate");
       if (!d || el.querySelector(".nineties-new")) return;
       if (now - new Date(d).getTime() < ninetyDays) {
-        const badge = document.createElement("img");
+        const badge     = document.createElement("img");
         badge.src       = "/90s/newgreen.gif";
         badge.alt       = "NEW!";
         badge.className = "nineties-new";
@@ -158,12 +195,13 @@
     injectMailboxes();
   }
 
-  function removeNinetiesMode() {
+  function removeNinetiesMode(state: any) {
     document.documentElement.removeAttribute("data-mode");
     document.getElementById("nineties-marquee")?.remove();
     document.getElementById("nineties-footer")?.remove();
     document.querySelectorAll(".nineties-mailbox").forEach(el => el.remove());
     document.querySelectorAll(".nineties-new").forEach(el => el.remove());
+    updateToggleButton(state);
   }
 
   // ── Unlock announcement ───────────────────────────────────────────────
@@ -171,13 +209,13 @@
   function showUnlockBanner() {
     if (document.getElementById("nineties-unlock-banner")) return;
     const banner = document.createElement("div");
-    banner.id = "nineties-unlock-banner";
+    banner.id    = "nineties-unlock-banner";
     banner.innerHTML = `
       <img src="/90s/undercon.gif" alt="">
       <div>
         <div class="blink">🏆 ACHIEVEMENT UNLOCKED 🏆</div>
         <div>YOU HAVE UNLOCKED THE 90s EXPERIENCE!</div>
-        <div class="nineties-unlock-sub">scroll down to find the secret controls</div>
+        <div class="nineties-unlock-sub">use the 90s button in the footer to toggle it</div>
       </div>
       <img src="/90s/undercon.gif" alt="">
     `;
@@ -188,9 +226,7 @@
   // ── Entry point ───────────────────────────────────────────────────────
 
   function initNineties() {
-    const state = loadState();
-    if (!state.score && state.score !== 0) return;
-
+    const state         = loadState();
     const alreadyUnlocked = Array.isArray(state.unlockedModes)
       && state.unlockedModes.includes(NINETIES_KEY);
 
@@ -200,12 +236,18 @@
       state.unlockedModes.push(NINETIES_KEY);
       state.activeMode = NINETIES_KEY;
       saveState(state);
+      updateToggleButton(state);
+      wireToggleButton();
       applyNinetiesMode();
       showUnlockBanner();
       return;
     }
 
-    // Already unlocked — apply if still active
+    // Always update button and wire it
+    updateToggleButton(state);
+    wireToggleButton();
+
+    // Apply if active
     if (state.activeMode === NINETIES_KEY) {
       applyNinetiesMode();
     }

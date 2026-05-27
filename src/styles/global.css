@@ -292,18 +292,45 @@ html.scrolled #back-to-top {
    html[data-mode="90s"] controls everything.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Flying toasters background */
+/* Flying toasters background — on the html root so it shows in all gutters */
+html[data-mode="90s"] {
+  background-image: url('/90s/background.png');
+  background-repeat: repeat;
+  background-attachment: fixed;
+  background-color: #000;
+}
+
+/* Main content + real footer keep their light background so text is readable */
 html[data-mode="90s"] body {
-  background-image: url('/90s/background.png') !important;
-  background-repeat: repeat !important;
-  background-attachment: fixed !important;
-  background-color: #000 !important;
+  background-color: transparent !important;
+}
+html[data-mode="90s"] main,
+html[data-mode="90s"] footer {
+  background-color: var(--bg);
 }
 
 /* No-background / low-bandwidth version (?nobg=1) */
-html[data-mode="90s"][data-nobg="true"] body {
+html[data-mode="90s"][data-nobg="true"] {
   background-image: none !important;
   background-color: #c0c0c0 !important;
+}
+
+/* Suppress hero dot-grid and shimmer — they look wrong on the dark tile */
+html[data-mode="90s"] .hero-grid::before,
+html[data-mode="90s"] .hero-grid::after {
+  display: none;
+}
+
+/* Suppress word-cloud hover effect — Comic Sans chaos clashes with 90s mode */
+html[data-mode="90s"] .card-bg {
+  display: none !important;
+}
+
+/* Locked state for the 90s toggle button in the footer */
+#nineties-toggle-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* Classic 90s link colours */
