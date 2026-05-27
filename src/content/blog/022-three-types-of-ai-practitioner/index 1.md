@@ -5,14 +5,16 @@ date: May 27 2026
 tags:
   - AI
 ---
-There is clearly a difference between someone who enters queries into ChatGPT and someone who develops a new LLM. However, more so then ever, I hear people at the pub talking about the fact that they "work with AI" (it could be the area or types of pubs I visit). 
+There's clearly a difference between someone who types queries into ChatGPT and someone who builds LLMs from the ground up, but both will tell you at a pub that they "work with AI." (I may need to reconsider my local.)
 
-To me, my clarifying questions to better equip myself on the type of conversation we can have is generally geared to three types of roles that people play in this AI world: 
+When someone tells me they work with AI, my clarifying questions are quietly designed to sort them into one of three categories.
 
-Type 1: AI Researcher - You are working directly with or building core LLM models. 
+Type 1: AI Researcher. You are working directly with or building core LLM models. Architecture, training, alignment. For me this is the actual scientific and engineering basis of the field. If your employer is one of five labs or you're working in an academically aligned field and your calendar is full of training schedules (not at the gym), this is you 
 
-Type 2: AI Practitioner - You are using AI to build something for you (a document, something vibe-coded). Your typical ChatGPT end-user. 
+Type 2: AI Practitioner. You are using AI to build things for you: documents, code, presentations. The typical ChatGPT end-user. This category is enormous, growing fast, and awesome. Using AI to write your quarterly report is cool. It is not, however, the same as engineering the system that wrote it.
 
-Type 3: AI Engineer - You are building something that consumes or leverages an LLM. Pretty commonly accepted term. You're building a solution that calls a couple of AI APIs or perhaps doing some prompt engineering. 
+Type 3: AI Engineer. You are building something that consumes or leverages an LLM. A pretty commonly accepted term at this point. You're writing code that calls AI APIs, doing prompt engineering, wiring models into larger pipelines. The thing you ship is a product or solution that incorporates an LLM somewhere.
 
-There. You have it. That's my mental model. Personally, I think that the intended outcome also has a lot to do with the type. For example: if you are fine-tuning a model to advance data science/to build something groundbreaking, your work would land at Type 1, however if you are fine-tuning because the application you built needs a better engine inside, it is Type 3. 
+After testing this, I think the outcome matters too.... Take fine-tuning: if you are adapting a model to advance science or push a research frontier, that's Type 1 work. If you're fine-tuning because the application you built needs a better engine under the hood, that's Type 3.
+
+HIH - Matt
