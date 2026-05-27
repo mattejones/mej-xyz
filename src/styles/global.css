@@ -292,25 +292,22 @@ html.scrolled #back-to-top {
    html[data-mode="90s"] controls everything.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Flying toasters background — on the html root so it shows in all gutters */
-html[data-mode="90s"] {
-  background-image: url('/90s/background.png');
-  background-repeat: repeat;
-  background-attachment: fixed;
-  background-color: #000;
+/* Flying toasters tile — directly on body so it always renders */
+html[data-mode="90s"] body {
+  background-image: url('/90s/background.png') !important;
+  background-repeat: repeat !important;
+  background-color: #000 !important;
 }
 
-/* Main content + real footer keep their light background so text is readable */
-html[data-mode="90s"] body {
-  background-color: transparent !important;
-}
+/* Main content + real footer keep their light background so text is readable.
+   Toasters visible in the side gutters around the max-w-4xl container. */
 html[data-mode="90s"] main,
 html[data-mode="90s"] footer {
   background-color: var(--bg);
 }
 
 /* No-background / low-bandwidth version (?nobg=1) */
-html[data-mode="90s"][data-nobg="true"] {
+html[data-mode="90s"][data-nobg="true"] body {
   background-image: none !important;
   background-color: #c0c0c0 !important;
 }
@@ -496,41 +493,68 @@ html[data-mode="90s"] a:hover {
   margin-right: 5px;
 }
 
-/* ── Unlock announcement banner ───────────────────────────────────────── */
+/* ── Unlock announcement banner — matches site neo-brutalist style ──────── */
 #nineties-unlock-banner {
   position: fixed;
   top: 80px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
-  background: #000080;
-  border: 3px solid #ffff00;
-  color: #ffff00;
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 14px;
-  font-weight: bold;
-  padding: 16px 24px;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+  color: var(--text);
+  padding: 14px 20px;
   text-align: center;
   max-width: 90vw;
-  box-shadow: 6px 6px 0 #000;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  animation: banner-border-flash 0.5s step-end infinite;
+  min-width: 260px;
 }
-#nineties-unlock-banner img {
-  height: 36px;
-  width: auto;
-  flex-shrink: 0;
+#nineties-unlock-banner .nineties-unlock-title {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 #nineties-unlock-banner .nineties-unlock-sub {
-  font-size: 11px;
-  font-weight: normal;
-  margin-top: 6px;
-  color: #aaaaff;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-@keyframes banner-border-flash {
-  0%, 100% { border-color: #ffff00; }
-  50%       { border-color: #ff4444; }
+/* ── ArrowCard → 90s HTML table ──────────────────────────────────────────── */
+.nineties-hidden {
+  display: none !important;
+}
+
+.nineties-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 14px;
+  border: 2px solid #808080;
+  background-color: var(--card-bg);
+}
+.nineties-table tr {
+  border-bottom: 1px solid #c0c0c0;
+}
+.nineties-table tr:last-child {
+  border-bottom: none;
+}
+.nineties-table tr:hover td {
+  background-color: #e8e8ff;
+}
+.nineties-table td {
+  padding: 5px 8px;
+  vertical-align: top;
+}
+.nineties-table-date {
+  color: #666;
+  white-space: nowrap;
+  font-size: 11px;
+  width: 72px;
+}
+.nineties-table-title {
+  font-weight: bold;
+}
+.nineties-table-desc {
+  color: #444;
+  font-size: 12px;
 }
