@@ -1,11 +1,11 @@
 ---
-title: Three types of AI Partitioner
+title: Three types of AI Practitioner
 description: Defining clear AI practices
 date: May 27 2026
 tags:
   - AI
 ---
-There's clearly a difference between someone who types queries into ChatGPT and someone who builds LLMs from the ground up, but both will tell you at a pub that they "work with AI." (I may need to reconsider my local.)
+There's clearly a difference between someone who types queries into ChatGPT and someone who builds LLMs from the ground up, but both will tell you at a pub that they "work with AI." (I may need to reconsider my local.) 
 
 When someone tells me they work with AI, my clarifying questions are quietly designed to sort them into one of three categories.
 
