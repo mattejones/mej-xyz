@@ -285,3 +285,225 @@ html #back-to-top {
 html.scrolled #back-to-top {
   @apply opacity-100 pointer-events-auto;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   90s UNLOCKABLE EXPERIENCE
+   Activated by Nineties.astro when score >= 175 (level 3).
+   html[data-mode="90s"] controls everything.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Flying toasters background */
+html[data-mode="90s"] body {
+  background-image: url('/90s/background.png') !important;
+  background-repeat: repeat !important;
+  background-attachment: fixed !important;
+  background-color: #000 !important;
+}
+
+/* No-background / low-bandwidth version (?nobg=1) */
+html[data-mode="90s"][data-nobg="true"] body {
+  background-image: none !important;
+  background-color: #c0c0c0 !important;
+}
+
+/* Classic 90s link colours */
+html[data-mode="90s"] a {
+  color: #0000ee;
+  text-decoration: underline;
+}
+html[data-mode="90s"] a:visited {
+  color: #551a8b;
+}
+html[data-mode="90s"] a:hover {
+  color: #ff0000;
+}
+
+/* ── Blink ────────────────────────────────────────────────────────────── */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* ── Marquee strip ────────────────────────────────────────────────────── */
+#nineties-marquee {
+  background: #000080;
+  color: #ffff00;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 5px 0;
+  border-top: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  position: relative;
+  z-index: 55;
+}
+
+/* ── Footer strip ─────────────────────────────────────────────────────── */
+#nineties-footer {
+  text-align: center;
+  background: #c0c0c0;
+  border-top: 3px ridge #ffffff;
+  border-bottom: 3px groove #808080;
+  padding: 20px 16px;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12px;
+  color: #000;
+}
+
+.nineties-constbig {
+  margin-bottom: 16px;
+}
+.nineties-constbig img {
+  max-width: 100%;
+  height: auto;
+}
+
+.nineties-badges {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.nineties-badges img {
+  display: block;
+  border: 1px solid #808080;
+}
+
+.nineties-counter-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.nineties-typloop {
+  height: 70px;
+  width: auto;
+}
+
+.nineties-dancing {
+  height: 80px;
+  width: auto;
+}
+
+.nineties-counter-text {
+  font-family: 'Times New Roman', Times, serif;
+  font-weight: bold;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #000080;
+}
+
+.nineties-disclaimer {
+  font-size: 11px;
+  color: #000080;
+  line-height: 2.2;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.nineties-lowbw {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0000ee;
+  text-decoration: underline;
+  font-size: 11px;
+}
+.nineties-lowbw img {
+  height: 22px;
+  width: auto;
+  vertical-align: middle;
+}
+.nineties-lowbw:hover {
+  color: #ff0000;
+}
+
+.nineties-off-btn {
+  background: none;
+  border: none;
+  color: #0000ee;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11px;
+  padding: 0;
+}
+.nineties-off-btn:hover {
+  color: #ff0000;
+}
+
+/* ── In-content injections ────────────────────────────────────────────── */
+.nineties-hr {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 10px auto;
+}
+
+/* NEW! starburst — absolute corner badge on ArrowCards */
+.nb-arrow-card {
+  position: relative; /* ensure stacking context for the badge */
+}
+.nineties-new {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  height: 22px;
+  width: auto;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Mailbox next to mailto links */
+.nineties-mailbox {
+  height: 20px;
+  width: auto;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* ── Unlock announcement banner ───────────────────────────────────────── */
+#nineties-unlock-banner {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: #000080;
+  border: 3px solid #ffff00;
+  color: #ffff00;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 16px 24px;
+  text-align: center;
+  max-width: 90vw;
+  box-shadow: 6px 6px 0 #000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: banner-border-flash 0.5s step-end infinite;
+}
+#nineties-unlock-banner img {
+  height: 36px;
+  width: auto;
+  flex-shrink: 0;
+}
+#nineties-unlock-banner .nineties-unlock-sub {
+  font-size: 11px;
+  font-weight: normal;
+  margin-top: 6px;
+  color: #aaaaff;
+}
+
+@keyframes banner-border-flash {
+  0%, 100% { border-color: #ffff00; }
+  50%       { border-color: #ff4444; }
+}

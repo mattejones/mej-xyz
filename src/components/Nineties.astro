@@ -1,0 +1,216 @@
+---
+// Nineties.astro — 90s unlockable experience overlay
+// Activated when score >= UNLOCK_SCORE. Pure client-side, no server props needed.
+---
+
+<script>
+  const STORAGE_KEY  = "mej_score_v1";
+  const NINETIES_KEY = "90s";
+  const UNLOCK_SCORE = 175; // Level 3
+
+  // ── State helpers ─────────────────────────────────────────────────────
+
+  function loadState(): any {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return {};
+      return { unlockedModes: [] as string[], activeMode: null as string | null, score: 0, ...JSON.parse(raw) };
+    } catch { return {}; }
+  }
+
+  function saveState(s: any) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {}
+  }
+
+  // ── DOM injections ────────────────────────────────────────────────────
+
+  function injectMarquee() {
+    if (document.getElementById("nineties-marquee")) return;
+    const state = loadState();
+    const visitorNum = String(Math.max(1337, (state.score ?? 0) * 7 + 1337)).padStart(6, "0");
+    const el = document.createElement("div");
+    el.id = "nineties-marquee";
+    el.innerHTML =
+      `<marquee scrollamount="3">` +
+      `★ WELCOME TO MEJ.XYZ ★ LAST UPDATED: TODAY ★ ` +
+      `YOU ARE VISITOR NUMBER ${visitorNum} ★ ` +
+      `THIS SITE BEST VIEWED IN NETSCAPE NAVIGATOR 4.0 AT 800×600 IN 16-BIT COLOUR ★ ` +
+      `POWERED BY JOLT COLA ★ UNDER CONSTRUCTION — CHECK BACK SOON ★ ` +
+      `NO UNAUTHORISED DEEP-LINKING ★ FRAMES ARE SUPPORTED ★` +
+      `</marquee>`;
+    const main = document.querySelector("main");
+    if (main) main.insertAdjacentElement("beforebegin", el);
+  }
+
+  function injectFooterStrip() {
+    if (document.getElementById("nineties-footer")) return;
+    const state = loadState();
+    const visitorNum = String(Math.max(1337, (state.score ?? 0) * 7 + 1337)).padStart(6, "0");
+    const nobgHref = window.location.pathname + "?nobg=1";
+
+    const el = document.createElement("div");
+    el.id = "nineties-footer";
+    el.innerHTML = `
+      <div class="nineties-constbig">
+        <img src="/90s/constbig.gif" alt="Under Construction">
+      </div>
+
+      <div class="nineties-badges">
+        <img src="/90s/best-viewed-eyes.gif" alt="Best viewed with EYES"  title="Best Viewed With EYES">
+        <img src="/90s/commnow.gif"           alt="Netscape NOW!"          title="Netscape NOW!">
+        <img src="/90s/ie_anim.gif"           alt="Internet Explorer"      title="Get Internet Explorer">
+        <img src="/90s/jolt.gif"              alt="Powered by Jolt Cola"   title="This site powered by Jolt Cola">
+        <img src="/90s/linux-tux.gif"         alt="Linux"                  title="Linux Inside">
+        <img src="/90s/constru2.gif"          alt="Under Construction"     title="Under Construction">
+      </div>
+
+      <div class="nineties-counter-row">
+        <img src="/90s/typloop.gif"    alt="Typing computer" class="nineties-typloop">
+        <div class="nineties-counter-text">
+          <img src="/90s/vcounter.gif" alt="visitor counter digit display">
+          <br>YOU ARE VISITOR #${visitorNum}
+        </div>
+        <img src="/90s/dancing-aim.gif" alt="Dancing AIM guy" class="nineties-dancing">
+      </div>
+
+      <div class="nineties-disclaimer">
+        <span class="blink">★</span>
+        THIS PAGE IS BEST VIEWED IN NETSCAPE NAVIGATOR 4.0 AT 800×600 RESOLUTION IN 16-BIT COLOUR
+        <span class="blink">★</span>
+        <br><br>
+        <a href="${nobgHref}" class="nineties-lowbw">
+          <img src="/90s/modem.gif" alt="56K Modem">
+          [ click here for low-bandwidth / no-background version ]
+        </a>
+        <br><br>
+        <button id="nineties-off-btn" class="nineties-off-btn">
+          [ disable 90s mode ]
+        </button>
+      </div>
+    `;
+
+    const footer = document.querySelector("footer");
+    if (footer) footer.insertAdjacentElement("afterend", el);
+
+    // Disable button handler
+    document.getElementById("nineties-off-btn")?.addEventListener("click", () => {
+      const s = loadState();
+      s.activeMode = null;
+      saveState(s);
+      removeNinetiesMode();
+    });
+  }
+
+  function replaceHRs() {
+    document.querySelectorAll("main hr").forEach(hr => {
+      const img = document.createElement("img");
+      img.src    = "/90s/hr-gif-car-line.gif";
+      img.alt    = "────────────────────────";
+      img.className = "nineties-hr";
+      hr.replaceWith(img);
+    });
+  }
+
+  function injectNewBadges() {
+    const now = Date.now();
+    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+    document.querySelectorAll<HTMLElement>("[data-pubdate]").forEach(el => {
+      const d = el.getAttribute("data-pubdate");
+      if (!d || el.querySelector(".nineties-new")) return;
+      if (now - new Date(d).getTime() < ninetyDays) {
+        const badge = document.createElement("img");
+        badge.src       = "/90s/newgreen.gif";
+        badge.alt       = "NEW!";
+        badge.className = "nineties-new";
+        el.appendChild(badge);
+      }
+    });
+  }
+
+  function injectMailboxes() {
+    document.querySelectorAll<HTMLElement>('a[href^="mailto:"]').forEach(link => {
+      if (link.querySelector(".nineties-mailbox")) return;
+      const img     = document.createElement("img");
+      img.src       = "/90s/mailbox.gif";
+      img.alt       = "";
+      img.className = "nineties-mailbox";
+      link.prepend(img);
+    });
+  }
+
+  // ── Apply / remove mode ───────────────────────────────────────────────
+
+  function applyNinetiesMode() {
+    const html = document.documentElement;
+    html.setAttribute("data-mode", "90s");
+
+    // No-background param
+    if (new URLSearchParams(window.location.search).get("nobg") === "1") {
+      html.setAttribute("data-nobg", "true");
+    } else {
+      html.removeAttribute("data-nobg");
+    }
+
+    injectMarquee();
+    injectFooterStrip();
+    replaceHRs();
+    injectNewBadges();
+    injectMailboxes();
+  }
+
+  function removeNinetiesMode() {
+    document.documentElement.removeAttribute("data-mode");
+    document.getElementById("nineties-marquee")?.remove();
+    document.getElementById("nineties-footer")?.remove();
+    document.querySelectorAll(".nineties-mailbox").forEach(el => el.remove());
+    document.querySelectorAll(".nineties-new").forEach(el => el.remove());
+  }
+
+  // ── Unlock announcement ───────────────────────────────────────────────
+
+  function showUnlockBanner() {
+    if (document.getElementById("nineties-unlock-banner")) return;
+    const banner = document.createElement("div");
+    banner.id = "nineties-unlock-banner";
+    banner.innerHTML = `
+      <img src="/90s/undercon.gif" alt="">
+      <div>
+        <div class="blink">🏆 ACHIEVEMENT UNLOCKED 🏆</div>
+        <div>YOU HAVE UNLOCKED THE 90s EXPERIENCE!</div>
+        <div class="nineties-unlock-sub">scroll down to find the secret controls</div>
+      </div>
+      <img src="/90s/undercon.gif" alt="">
+    `;
+    document.body.insertAdjacentElement("afterbegin", banner);
+    setTimeout(() => banner.remove(), 6000);
+  }
+
+  // ── Entry point ───────────────────────────────────────────────────────
+
+  function initNineties() {
+    const state = loadState();
+    if (!state.score && state.score !== 0) return;
+
+    const alreadyUnlocked = Array.isArray(state.unlockedModes)
+      && state.unlockedModes.includes(NINETIES_KEY);
+
+    // First-time unlock
+    if (state.score >= UNLOCK_SCORE && !alreadyUnlocked) {
+      if (!Array.isArray(state.unlockedModes)) state.unlockedModes = [];
+      state.unlockedModes.push(NINETIES_KEY);
+      state.activeMode = NINETIES_KEY;
+      saveState(state);
+      applyNinetiesMode();
+      showUnlockBanner();
+      return;
+    }
+
+    // Already unlocked — apply if still active
+    if (state.activeMode === NINETIES_KEY) {
+      applyNinetiesMode();
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", initNineties);
+  document.addEventListener("astro:after-swap",  initNineties);
+</script>

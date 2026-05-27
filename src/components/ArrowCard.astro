@@ -16,6 +16,7 @@ const tags: string[] =
   href={`/${entry.collection}/${entry.slug}`}
   class="nb-card nb-arrow-card group"
   data-tags={JSON.stringify(tags)}
+  data-pubdate={entry.data.date?.toISOString()}
 >
   <!-- Background word cloud — low z-index, clips to card -->
   <div class="card-bg" aria-hidden="true"></div>
