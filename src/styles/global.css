@@ -292,24 +292,48 @@ html.scrolled #back-to-top {
    html[data-mode="90s"] controls everything.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Flying toasters tile — directly on body so it always renders */
+/* Flying toasters tile — on body; inline JS styles are also set for belt-and-suspenders */
 html[data-mode="90s"] body {
   background-image: url('/90s/background.png') !important;
   background-repeat: repeat !important;
   background-color: #000 !important;
 }
 
-/* Main content + real footer keep their light background so text is readable.
-   Toasters visible in the side gutters around the max-w-4xl container. */
+/* Strip background off main/sections so the tile shows in gutters.
+   The centred .max-w-4xl container gets Windows grey — tile visible either side. */
 html[data-mode="90s"] main,
+html[data-mode="90s"] main section,
+html[data-mode="90s"] main > div,
 html[data-mode="90s"] footer {
-  background-color: var(--bg);
+  background-color: transparent !important;
+}
+html[data-mode="90s"] main .max-w-4xl,
+html[data-mode="90s"] footer .max-w-4xl {
+  background-color: #c0c0c0;
 }
 
 /* No-background / low-bandwidth version (?nobg=1) */
 html[data-mode="90s"][data-nobg="true"] body {
   background-image: none !important;
   background-color: #c0c0c0 !important;
+}
+
+/* ── Typography ────────────────────────────────────────────────────────── */
+/* Everything inside main defaults to Times New Roman */
+html[data-mode="90s"] main * {
+  font-family: 'Times New Roman', Times, serif !important;
+}
+/* Headings get Arial — classic 90s combo */
+html[data-mode="90s"] main h1,
+html[data-mode="90s"] main h2,
+html[data-mode="90s"] main h3 {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+/* Cards keep readable dark text on their white/grey bg */
+html[data-mode="90s"] .nb-card,
+html[data-mode="90s"] .nb-card-accent {
+  background-color: #ffffff;
+  color: #000000;
 }
 
 /* Suppress hero dot-grid and shimmer — they look wrong on the dark tile */
@@ -524,37 +548,49 @@ html[data-mode="90s"] a:hover {
   display: none !important;
 }
 
+/* Classic HTML table as rendered by Netscape Navigator / IE 4 */
 .nineties-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 2px;
   font-family: 'Times New Roman', Times, serif;
   font-size: 14px;
-  border: 2px solid #808080;
-  background-color: var(--card-bg);
+  border: 3px outset #d4d0c8; /* Win98 raised frame */
+  background-color: #c0c0c0;  /* matches the page bg */
 }
-.nineties-table tr {
-  border-bottom: 1px solid #c0c0c0;
+.nineties-table tr:nth-child(odd) td {
+  background-color: #ffffff;
 }
-.nineties-table tr:last-child {
-  border-bottom: none;
+.nineties-table tr:nth-child(even) td {
+  background-color: #ececec;
 }
 .nineties-table tr:hover td {
-  background-color: #e8e8ff;
+  background-color: #000080; /* classic selection highlight */
+  color: #ffffff;
+}
+.nineties-table tr:hover td a {
+  color: #ffffff !important;
 }
 .nineties-table td {
-  padding: 5px 8px;
+  border: 1px inset #c0c0c0;
+  padding: 3px 6px;
   vertical-align: top;
 }
 .nineties-table-date {
-  color: #666;
+  color: #444;
   white-space: nowrap;
   font-size: 11px;
-  width: 72px;
+  width: 76px;
 }
-.nineties-table-title {
+.nineties-table-title a {
+  color: #0000cc;
+  text-decoration: underline;
   font-weight: bold;
 }
+.nineties-table-title a:visited {
+  color: #800080;
+}
 .nineties-table-desc {
-  color: #444;
+  color: #333;
   font-size: 12px;
 }

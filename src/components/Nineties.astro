@@ -60,11 +60,12 @@
       s.activeMode = wasOn ? null : NINETIES_KEY;
       saveState(s);
       if (wasOn) {
-        removeNinetiesMode(s);
+        removeNinetiesMode();
       } else {
         applyNinetiesMode();
-        updateToggleButton(s);
       }
+      // Always re-read from storage so the button reflects persisted state
+      updateToggleButton(loadState());
     });
   }
 
@@ -228,11 +229,17 @@
     const html = document.documentElement;
     html.setAttribute("data-mode", "90s");
 
-    // Belt-and-suspenders: inline styles ensure the tile renders regardless
-    // of CSS specificity fights from other rules or Tailwind's base layer
+    // Belt-and-suspenders: inline styles guarantee the tile shows regardless
+    // of CSS specificity or Tailwind base-layer overrides
     document.body.style.setProperty("background-image", "url('/90s/background.png')");
     document.body.style.setProperty("background-repeat", "repeat");
     document.body.style.setProperty("background-color", "#000000");
+
+    // Make main/footer transparent so tile is visible in gutters
+    const mainEl   = document.querySelector("main")   as HTMLElement | null;
+    const footerEl = document.querySelector("footer") as HTMLElement | null;
+    if (mainEl)   mainEl.style.setProperty("background-color", "transparent");
+    if (footerEl) footerEl.style.setProperty("background-color", "transparent");
 
     // No-background param (?nobg=1)
     if (new URLSearchParams(window.location.search).get("nobg") === "1") {
@@ -251,24 +258,26 @@
     injectCardTables();
   }
 
-  function removeNinetiesMode(state: any) {
+  function removeNinetiesMode() {
     document.documentElement.removeAttribute("data-mode");
 
-    // Remove inline body styles
+    // Remove all inline body / layout overrides
     document.body.style.removeProperty("background-image");
     document.body.style.removeProperty("background-repeat");
     document.body.style.removeProperty("background-color");
+    const mainEl   = document.querySelector("main")   as HTMLElement | null;
+    const footerEl = document.querySelector("footer") as HTMLElement | null;
+    if (mainEl)   mainEl.style.removeProperty("background-color");
+    if (footerEl) footerEl.style.removeProperty("background-color");
 
     document.getElementById("nineties-marquee")?.remove();
     document.getElementById("nineties-footer")?.remove();
     document.querySelectorAll(".nineties-mailbox").forEach(el => el.remove());
     document.querySelectorAll(".nineties-new").forEach(el => el.remove());
 
-    // Restore card lists, remove tables
+    // Restore card lists, remove injected tables
     document.querySelectorAll(".nineties-table").forEach(el => el.remove());
     document.querySelectorAll("ul.nineties-hidden").forEach(ul => ul.classList.remove("nineties-hidden"));
-
-    updateToggleButton(state);
   }
 
   // ── Unlock announcement — neo-brutalist style ─────────────────────────
