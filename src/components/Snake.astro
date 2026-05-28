@@ -1,39 +1,37 @@
 ---
-// Snake.astro — Mini snake game on the homepage ArrowCard grid
+// Snake.astro — Canvas-based Snake mini-game on the homepage
+//
+// A <canvas> is placed over the two-column card-grid section of the homepage.
+// Each ArrowCard's bounding rect is computed at activation time and rendered as
+// a neo-brutalist obstacle box. The snake navigates the open space around them.
 //
 // Unlocks at UNLOCK_SCORE (100 pts). Toggle via #snake-play-btn in Footer.
-// The two columns of ArrowCards on the homepage become a 2×N game board.
-// Tile classes (snake-head / snake-body / snake-food / snake-empty) are
-// added dynamically; CSS is in global.css (needs !important over scoped rules).
+// Homepage only — clicking Play from another page navigates to /?play=snake.
 //
-// Own storage key (mej_snake_v1) keeps unlock/active state.
-// Snake points are written directly to mej_score_v1.snakePts;
-// ScoreTracker re-reads that field on every flush so no race condition.
-//
-// Mutual exclusivity: dispatches mej:mode-activate {mode:"snake"} on open,
-// listens for the same event to close if another mode activates.
+// Own storage key: mej_snake_v1 { unlocked, active }
+// Score integration: writes directly to mej_score_v1.snakePts
+// Mutual exclusivity: dispatches / listens for mej:mode-activate custom event
 ---
 
 <script>
   const SNAKE_KEY    = "mej_snake_v1";
   const SCORE_KEY    = "mej_score_v1";
   const UNLOCK_SCORE = 100;
-  const FOOD_PTS     = 5;   // site-score points per food eaten
-  const TICK_MS      = 420; // ms per game tick
+  const FOOD_PTS     = 5;    // site-score points per food eaten
+  const TICK_MS      = 180;  // ms per game step
 
-  // ── Score constants mirror ScoreTracker ───────────────────────────────
+  // Score constants — must mirror ScoreTracker.astro exactly
   const VISIT_PTS     = 10;
   const SCROLL_FACTOR = 0.5;
   const CURSOR_FACTOR = 0.08;
   const CURSOR_CAP    = 40;
 
   // ── Types ─────────────────────────────────────────────────────────────
-
   interface SnakeState { unlocked: boolean; active: boolean; }
-  type Pos = { row: number; col: number };
+  type Pos  = { row: number; col: number };
+  type Rect = { x: number; y: number; w: number; h: number };
 
   // ── Storage helpers ───────────────────────────────────────────────────
-
   function loadState(): SnakeState {
     try {
       const raw = localStorage.getItem(SNAKE_KEY);
@@ -57,11 +55,10 @@
     try {
       const raw = localStorage.getItem(SCORE_KEY);
       const s   = raw ? JSON.parse(raw) : {};
-      s.snakePts  = (s.snakePts ?? 0) + pts;
-      // Recompute score using the same formula as ScoreTracker
+      s.snakePts = (s.snakePts ?? 0) + pts;
       s.score =
         (s.visits?.length ?? 0) * VISIT_PTS +
-        Math.floor(Math.sqrt(s.scrollPx ?? 0) * SCROLL_FACTOR) +
+        Math.floor(Math.sqrt(s.scrollPx  ?? 0) * SCROLL_FACTOR) +
         Math.min(Math.floor(Math.sqrt(s.cursorPx ?? 0) * CURSOR_FACTOR), CURSOR_CAP) +
         s.snakePts;
       localStorage.setItem(SCORE_KEY, JSON.stringify(s));
@@ -70,8 +67,361 @@
     } catch {}
   }
 
-  // ── Play button ───────────────────────────────────────────────────────
+  // ── CSS helpers ───────────────────────────────────────────────────────
+  function cssVar(name: string): string {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
 
+  /** Convert a #RRGGBB or #RGB hex colour to rgba(..., alpha) */
+  function hexAlpha(hex: string, alpha: number): string {
+    const h = hex.replace(/^#/, "");
+    let r: number, g: number, b: number;
+    if (h.length === 3) {
+      r = parseInt(h[0] + h[0], 16);
+      g = parseInt(h[1] + h[1], 16);
+      b = parseInt(h[2] + h[2], 16);
+    } else {
+      r = parseInt(h.slice(0, 2), 16);
+      g = parseInt(h.slice(2, 4), 16);
+      b = parseInt(h.slice(4, 6), 16);
+    }
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  // ── Canvas / grid ─────────────────────────────────────────────────────
+  let canvas: HTMLCanvasElement | null = null;
+  let ctx: CanvasRenderingContext2D | null = null;
+  let N_COLS = 0;
+  let N_ROWS = 0;
+  let CELL   = 32;            // px per logical game cell
+
+  let obstacles: boolean[][] = [];   // obstacles[row][col]
+  let cardRects: Rect[]      = [];   // ArrowCard rects relative to canvas origin
+
+  function findGridContainer(): HTMLElement | null {
+    // The two-section content grid on the homepage (not the hero grid)
+    for (const div of document.querySelectorAll<HTMLElement>("main div.grid")) {
+      const sections = div.querySelectorAll<HTMLElement>(":scope > section");
+      if (sections.length === 2 && div.querySelectorAll(".nb-arrow-card").length > 0) {
+        return div;
+      }
+    }
+    return null;
+  }
+
+  function setupCanvas(): boolean {
+    const container = findGridContainer();
+    if (!container) return false;
+
+    const cw = container.clientWidth;
+    const ch = container.offsetHeight;
+    if (cw < 80 || ch < 80) return false;
+
+    // ~20 cells across on desktop; clamp cell size between 24-36 px
+    CELL   = Math.max(24, Math.min(36, Math.floor(cw / 20)));
+    N_COLS = Math.floor(cw / CELL);
+    N_ROWS = Math.floor(ch / CELL);
+    if (N_COLS < 3 || N_ROWS < 3) return false;
+
+    // Remove any previous canvas
+    document.getElementById("snake-canvas")?.remove();
+
+    canvas = document.createElement("canvas");
+    canvas.id     = "snake-canvas";
+    canvas.width  = N_COLS * CELL;
+    canvas.height = N_ROWS * CELL;
+    // CSS size matches the container's actual pixel width/height
+    canvas.style.cssText =
+      `position:absolute;top:0;left:0;display:block;z-index:5;` +
+      `width:${cw}px;height:${ch}px;`;
+
+    ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+
+    container.style.position = "relative";
+    container.appendChild(canvas);
+
+    computeObstacles(container);
+    return true;
+  }
+
+  function computeObstacles(container: HTMLElement) {
+    obstacles = Array.from({ length: N_ROWS }, () => new Array<boolean>(N_COLS).fill(false));
+    cardRects = [];
+
+    const cr = container.getBoundingClientRect();
+
+    container.querySelectorAll<HTMLElement>(".nb-arrow-card").forEach(card => {
+      const r  = card.getBoundingClientRect();
+      const rx = r.left - cr.left;
+      const ry = r.top  - cr.top;
+      cardRects.push({ x: rx, y: ry, w: r.width, h: r.height });
+
+      // Mark every cell that overlaps this card as an obstacle
+      const c0 = Math.max(0,      Math.floor(rx           / CELL));
+      const c1 = Math.min(N_COLS, Math.ceil((rx + r.width)  / CELL));
+      const r0 = Math.max(0,      Math.floor(ry           / CELL));
+      const r1 = Math.min(N_ROWS, Math.ceil((ry + r.height) / CELL));
+      for (let row = r0; row < r1; row++) {
+        for (let col = c0; col < c1; col++) {
+          obstacles[row][col] = true;
+        }
+      }
+    });
+  }
+
+  // ── Game state ────────────────────────────────────────────────────────
+  let snake:     Pos[]         = [];
+  let food:      Pos | null    = null;
+  let dir:       Pos           = { row: 0, col: 1 };
+  let nextDir:   Pos           = { row: 0, col: 1 };
+  let running    = false;
+  let rafId:     number | null = null;
+  let lastTick   = 0;
+  let sessionPts = 0;
+
+  function posEq(a: Pos, b: Pos) { return a.row === b.row && a.col === b.col; }
+
+  function isFree(p: Pos): boolean {
+    if (p.row < 0 || p.row >= N_ROWS || p.col < 0 || p.col >= N_COLS) return false;
+    return !obstacles[p.row][p.col];
+  }
+
+  function placeFood() {
+    const free: Pos[] = [];
+    for (let row = 0; row < N_ROWS; row++) {
+      for (let col = 0; col < N_COLS; col++) {
+        const p = { row, col };
+        if (isFree(p) && !snake.some(s => posEq(s, p))) free.push(p);
+      }
+    }
+    food = free.length ? free[Math.floor(Math.random() * free.length)] : null;
+  }
+
+  function tick() {
+    dir = nextDir;
+    const head = snake[0];
+    const next: Pos = { row: head.row + dir.row, col: head.col + dir.col };
+
+    if (!isFree(next))                   { endGame(false); return; }
+    if (snake.some(p => posEq(p, next))) { endGame(false); return; }
+
+    snake.unshift(next);
+
+    if (food && posEq(next, food)) {
+      sessionPts += FOOD_PTS;
+      addSnakePoints(FOOD_PTS);
+      placeFood();
+      if (!food) { endGame(true); return; } // no free cells left — you win
+    } else {
+      snake.pop();
+    }
+    updateStatusUI();
+  }
+
+  function startRound() {
+    running    = true;
+    sessionPts = 0;
+
+    // Find the first free cell for the snake's starting position
+    let start: Pos | null = null;
+    outer:
+    for (let row = 0; row < N_ROWS; row++) {
+      for (let col = 0; col < N_COLS; col++) {
+        if (isFree({ row, col })) { start = { row, col }; break outer; }
+      }
+    }
+    if (!start) { running = false; return; }
+
+    snake   = [start];
+    dir     = { row: 0, col: 1 };
+    nextDir = { row: 0, col: 1 };
+    placeFood();
+    document.getElementById("snake-end")?.remove();
+    updateStatusUI();
+    lastTick = performance.now();
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(gameLoop);
+  }
+
+  function gameLoop(ts: number) {
+    if (!running) return;
+    if (ts - lastTick >= TICK_MS) {
+      lastTick = ts;
+      tick();
+      if (!running) return; // tick may have ended the game
+    }
+    draw();
+    rafId = requestAnimationFrame(gameLoop);
+  }
+
+  function endGame(won: boolean) {
+    running = false;
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+    draw();         // render final game state before overlay appears
+    showEndScreen(won);
+  }
+
+  // ── Canvas drawing ────────────────────────────────────────────────────
+  function draw() {
+    if (!ctx || !canvas) return;
+
+    const bg      = cssVar("--bg")       || "#F9F7F2";
+    const accent  = cssVar("--accent")   || "#3B5BDB";
+    const accent2 = cssVar("--accent-2") || "#FF6B35";
+    const cardBg  = cssVar("--card-bg")  || "#FFFFFF";
+    const border  = cssVar("--border")   || "#000000";
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // 1. Page background
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // 2. Subtle dot grid in open (non-obstacle) cells — mirrors the hero section
+    ctx.fillStyle = hexAlpha(accent, 0.18);
+    for (let row = 0; row < N_ROWS; row++) {
+      for (let col = 0; col < N_COLS; col++) {
+        if (!obstacles[row][col]) {
+          ctx.beginPath();
+          ctx.arc(col * CELL + CELL / 2, row * CELL + CELL / 2, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // 3. ArrowCard obstacles — rendered as neo-brutalist nb-card boxes
+    ctx.lineWidth = 2;
+    for (const r of cardRects) {
+      ctx.fillStyle = border;
+      ctx.fillRect(r.x + 4, r.y + 4, r.w, r.h);   // drop shadow
+      ctx.fillStyle = cardBg;
+      ctx.fillRect(r.x, r.y, r.w, r.h);             // card face
+      ctx.strokeStyle = border;
+      ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2); // border
+    }
+
+    // 4. Food — pulsing accent-2 square with nb-card shadow
+    if (food) {
+      const pulse = 0.78 + 0.22 * Math.abs(Math.sin(performance.now() / 280));
+      const fw  = CELL * pulse;
+      const off = (CELL - fw) / 2;
+      const fx  = food.col * CELL + off;
+      const fy  = food.row * CELL + off;
+      ctx.fillStyle = border;
+      ctx.fillRect(fx + 3, fy + 3, fw, fw);
+      ctx.fillStyle = accent2;
+      ctx.fillRect(fx, fy, fw, fw);
+      ctx.strokeStyle = border;
+      ctx.strokeRect(fx + 1, fy + 1, fw - 2, fw - 2);
+    }
+
+    // 5. Snake body (semi-transparent accent, inset slightly)
+    ctx.fillStyle = hexAlpha(accent, 0.5);
+    for (let i = 1; i < snake.length; i++) {
+      const s = snake[i];
+      ctx.fillRect(s.col * CELL + 3, s.row * CELL + 3, CELL - 6, CELL - 6);
+    }
+
+    // 6. Snake head (full accent, bordered)
+    if (snake.length > 0) {
+      const h = snake[0];
+      ctx.fillStyle   = accent;
+      ctx.fillRect(h.col * CELL, h.row * CELL, CELL, CELL);
+      ctx.strokeStyle = border;
+      ctx.lineWidth   = 2;
+      ctx.strokeRect(h.col * CELL + 1, h.row * CELL + 1, CELL - 2, CELL - 2);
+    }
+  }
+
+  // ── Status UI ─────────────────────────────────────────────────────────
+  function updateStatusUI() {
+    const el = document.getElementById("snake-status");
+    if (el) {
+      el.innerHTML =
+        `PTS +${sessionPts} &nbsp; LEN ${snake.length}<br>` +
+        `&larr; &uarr; &darr; &rarr; &nbsp; WASD`;
+    }
+  }
+
+  // ── End screen ────────────────────────────────────────────────────────
+  function showEndScreen(won: boolean) {
+    const container = findGridContainer();
+    if (!container) return;
+
+    const end = document.createElement("div");
+    end.id = "snake-end";
+    end.innerHTML = `
+      <div class="snake-end-title">${won ? "🐍 YOU WIN!" : "GAME OVER"}</div>
+      <div class="snake-end-score">+${sessionPts} PTS ADDED TO SCORE</div>
+      <div class="snake-end-actions">
+        <button class="snake-end-btn" id="snake-restart-btn">PLAY AGAIN</button>
+        <button class="snake-end-btn snake-end-close" id="snake-close-btn">CLOSE</button>
+      </div>
+    `;
+    container.appendChild(end);
+
+    document.getElementById("snake-restart-btn")?.addEventListener("click", () => {
+      end.remove();
+      startRound();
+    });
+    document.getElementById("snake-close-btn")?.addEventListener("click", () => {
+      const s = loadState();
+      s.active = false;
+      saveState(s);
+      deactivateSnake();
+      updatePlayButton(loadState());
+    });
+  }
+
+  // ── Controls ──────────────────────────────────────────────────────────
+  const KEY_MAP: Record<string, Pos> = {
+    ArrowUp:    { row: -1, col:  0 }, w: { row: -1, col:  0 },
+    ArrowDown:  { row:  1, col:  0 }, s: { row:  1, col:  0 },
+    ArrowLeft:  { row:  0, col: -1 }, a: { row:  0, col: -1 },
+    ArrowRight: { row:  0, col:  1 }, d: { row:  0, col:  1 },
+  };
+
+  function applyDir(d: Pos) {
+    // Reject 180° reversals to prevent instant self-collision
+    if (d.row !== -dir.row || d.col !== -dir.col) nextDir = d;
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (!running) return;
+    const d = KEY_MAP[e.key];
+    if (d) { applyDir(d); e.preventDefault(); }
+  }
+
+  function injectDPad(container: HTMLElement) {
+    if (document.getElementById("snake-dpad")) return;
+    const el = document.createElement("div");
+    el.id = "snake-dpad";
+    el.innerHTML = `
+      <button class="snake-dpad-btn" data-dir="up">↑</button>
+      <div class="snake-dpad-row">
+        <button class="snake-dpad-btn" data-dir="left">←</button>
+        <span class="snake-dpad-center"></span>
+        <button class="snake-dpad-btn" data-dir="right">→</button>
+      </div>
+      <button class="snake-dpad-btn" data-dir="down">↓</button>
+    `;
+    const dirMap: Record<string, Pos> = {
+      up: KEY_MAP.ArrowUp, down: KEY_MAP.ArrowDown,
+      left: KEY_MAP.ArrowLeft, right: KEY_MAP.ArrowRight,
+    };
+    el.querySelectorAll<HTMLButtonElement>(".snake-dpad-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const d = dirMap[btn.dataset.dir!];
+        if (d) applyDir(d);
+      });
+    });
+    container.appendChild(el);
+  }
+
+  // ── Play button ───────────────────────────────────────────────────────
   function updatePlayButton(state: SnakeState) {
     const btn = document.getElementById("snake-play-btn") as HTMLButtonElement | null;
     if (!btn) return;
@@ -101,20 +451,16 @@
     btn.dataset.snakeWired = "1";
 
     btn.addEventListener("click", () => {
-      const isHome = window.location.pathname === "/";
-
-      if (!isHome) {
-        // Navigate to homepage with auto-open param
+      if (window.location.pathname !== "/") {
         window.location.href = "/?play=snake";
         return;
       }
-
       const state  = loadState();
       state.active = !state.active;
       saveState(state);
 
       if (state.active) {
-        // Exclusive: signal all other modes to deactivate
+        // Exclusive: tell all other modes to deactivate
         document.dispatchEvent(new CustomEvent("mej:mode-activate", { detail: { mode: "snake" } }));
         activateSnake();
       } else {
@@ -124,234 +470,20 @@
     });
   }
 
-  // ── Grid helpers ──────────────────────────────────────────────────────
-
-  let leftCards:  HTMLElement[] = [];
-  let rightCards: HTMLElement[] = [];
-  let ROWS = 0;
-
-  function findCardGrid(): HTMLElement | null {
-    // Find the two-section card grid on the homepage robustly
-    for (const div of document.querySelectorAll<HTMLElement>("main div.grid")) {
-      const sections = div.querySelectorAll<HTMLElement>(":scope > section");
-      if (sections.length === 2 && div.querySelectorAll(".nb-arrow-card").length > 0) {
-        return div;
-      }
-    }
-    return null;
-  }
-
-  function buildGrid(): boolean {
-    const grid = findCardGrid();
-    if (!grid) return false;
-    const sections = grid.querySelectorAll<HTMLElement>(":scope > section");
-    if (sections.length < 2) return false;
-    leftCards  = Array.from(sections[0].querySelectorAll<HTMLElement>(".nb-arrow-card"));
-    rightCards = Array.from(sections[1].querySelectorAll<HTMLElement>(".nb-arrow-card"));
-    ROWS       = Math.max(leftCards.length, rightCards.length);
-    return ROWS > 0;
-  }
-
-  function cardAt(p: Pos): HTMLElement | null {
-    return (p.col === 0 ? leftCards : rightCards)[p.row] ?? null;
-  }
-
-  function posEq(a: Pos, b: Pos) { return a.row === b.row && a.col === b.col; }
-
-  // ── Game state ────────────────────────────────────────────────────────
-
-  let snake:      Pos[]                           = [];
-  let food:       Pos | null                      = null;
-  let dir:        Pos                             = { row: 0, col: 1 };
-  let nextDir:    Pos                             = { row: 0, col: 1 };
-  let loop:       ReturnType<typeof setInterval> | null = null;
-  let running     = false;
-  let sessionPts  = 0;
-
-  function totalCells() { return leftCards.length + rightCards.length; }
-
-  function placeFood() {
-    const free: Pos[] = [];
-    for (let col = 0; col < 2; col++) {
-      const col_cards = col === 0 ? leftCards : rightCards;
-      for (let row = 0; row < col_cards.length; row++) {
-        if (!snake.some(p => posEq(p, { row, col }))) free.push({ row, col });
-      }
-    }
-    food = free.length ? free[Math.floor(Math.random() * free.length)] : null;
-  }
-
-  function renderCells() {
-    for (let col = 0; col < 2; col++) {
-      const col_cards = col === 0 ? leftCards : rightCards;
-      for (let row = 0; row < col_cards.length; row++) {
-        const card = col_cards[row];
-        const pos  = { row, col };
-        card.classList.remove("snake-head", "snake-body", "snake-food", "snake-empty");
-        if      (posEq(pos, snake[0]))                     card.classList.add("snake-head");
-        else if (food && posEq(pos, food))                 card.classList.add("snake-food");
-        else if (snake.slice(1).some(p => posEq(p, pos))) card.classList.add("snake-body");
-        else                                               card.classList.add("snake-empty");
-      }
-    }
-  }
-
-  function updateStatusUI() {
-    const el = document.getElementById("snake-status");
-    if (el) {
-      el.innerHTML =
-        `PTS +${sessionPts} &nbsp; LEN ${snake.length}/${totalCells()}<br>` +
-        `&larr; &uarr; &darr; &rarr; &nbsp; WASD`;
-    }
-  }
-
-  function tick() {
-    if (!running) return;
-    dir = nextDir;
-
-    const head = snake[0];
-    const next: Pos = { row: head.row + dir.row, col: head.col + dir.col };
-
-    // Out-of-bounds
-    const destCol = next.col === 0 ? leftCards : (next.col === 1 ? rightCards : null);
-    if (!destCol || next.row < 0 || next.row >= destCol.length) {
-      endGame(false); return;
-    }
-    // Self-collision
-    if (snake.some(p => posEq(p, next))) { endGame(false); return; }
-
-    snake.unshift(next);
-
-    if (food && posEq(next, food)) {
-      sessionPts += FOOD_PTS;
-      addSnakePoints(FOOD_PTS);
-      if (snake.length >= totalCells()) { endGame(true); return; }
-      placeFood();
-    } else {
-      snake.pop();
-    }
-
-    renderCells();
-    updateStatusUI();
-  }
-
-  function startRound() {
-    if (!buildGrid()) return;
-    running    = true;
-    sessionPts = 0;
-    // Start snake in the middle-left cell heading right
-    snake   = [{ row: Math.floor(ROWS / 2), col: 0 }];
-    dir     = { row: 0, col: 1 };
-    nextDir = { row: 0, col: 1 };
-    placeFood();
-    document.getElementById("snake-end")?.remove();
-    renderCells();
-    updateStatusUI();
-    if (loop) clearInterval(loop);
-    loop = setInterval(tick, TICK_MS);
-  }
-
-  function endGame(won: boolean) {
-    running = false;
-    if (loop) { clearInterval(loop); loop = null; }
-    renderCells();
-    showEndScreen(won);
-  }
-
-  function showEndScreen(won: boolean) {
-    const grid = findCardGrid();
-    if (!grid) return;
-    grid.style.position = "relative";
-
-    const end = document.createElement("div");
-    end.id = "snake-end";
-    end.innerHTML = `
-      <div class="snake-end-title">${won ? "🐍 YOU WIN!" : "GAME OVER"}</div>
-      <div class="snake-end-score">+${sessionPts} PTS ADDED TO SCORE</div>
-      <div class="snake-end-actions">
-        <button class="snake-end-btn" id="snake-restart-btn">PLAY AGAIN</button>
-        <button class="snake-end-btn snake-end-close" id="snake-close-btn">CLOSE</button>
-      </div>
-    `;
-    grid.appendChild(end);
-
-    document.getElementById("snake-restart-btn")?.addEventListener("click", () => {
-      end.remove();
-      startRound();
-    });
-    document.getElementById("snake-close-btn")?.addEventListener("click", () => {
-      const s  = loadState();
-      s.active = false;
-      saveState(s);
-      deactivateSnake();
-      updatePlayButton(loadState());
-    });
-  }
-
-  // ── Controls ──────────────────────────────────────────────────────────
-
-  const KEY_MAP: Record<string, Pos> = {
-    ArrowUp:    { row: -1, col: 0 }, w: { row: -1, col: 0 },
-    ArrowDown:  { row:  1, col: 0 }, s: { row:  1, col: 0 },
-    ArrowLeft:  { row:  0, col: -1 }, a: { row:  0, col: -1 },
-    ArrowRight: { row:  0, col:  1 }, d: { row:  0, col:  1 },
-  };
-
-  function applyDir(d: Pos) {
-    // Reject 180° reversals
-    if (d.row !== -dir.row || d.col !== -dir.col) nextDir = d;
-  }
-
-  function onKeyDown(e: KeyboardEvent) {
-    if (!running) return;
-    const d = KEY_MAP[e.key];
-    if (d) { applyDir(d); e.preventDefault(); }
-  }
-
-  function injectDPad(container: HTMLElement) {
-    if (document.getElementById("snake-dpad")) return;
-    const el = document.createElement("div");
-    el.id = "snake-dpad";
-    el.innerHTML = `
-      <button class="snake-dpad-btn" data-dir="up">↑</button>
-      <div class="snake-dpad-row">
-        <button class="snake-dpad-btn" data-dir="left">←</button>
-        <span class="snake-dpad-center"></span>
-        <button class="snake-dpad-btn" data-dir="right">→</button>
-      </div>
-      <button class="snake-dpad-btn" data-dir="down">↓</button>
-    `;
-    el.querySelectorAll<HTMLButtonElement>(".snake-dpad-btn").forEach(btn => {
-      const dirMap: Record<string, Pos> = {
-        up:    KEY_MAP.ArrowUp,
-        down:  KEY_MAP.ArrowDown,
-        left:  KEY_MAP.ArrowLeft,
-        right: KEY_MAP.ArrowRight,
-      };
-      btn.addEventListener("click", () => {
-        const d = dirMap[btn.dataset.dir!];
-        if (d) applyDir(d);
-      });
-    });
-    container.appendChild(el);
-  }
-
   // ── Activate / deactivate ─────────────────────────────────────────────
-
   function activateSnake() {
     if (window.location.pathname !== "/") return;
-    if (!buildGrid()) return;
+    if (!setupCanvas()) return;
 
-    const grid = findCardGrid();
-    if (!grid) return;
-    grid.classList.add("snake-active");
+    const container = findGridContainer();
+    if (!container) return;
 
-    // Game UI bar below the grid
+    // Game UI bar (status + D-pad) below the grid
     if (!document.getElementById("snake-ui")) {
       const ui = document.createElement("div");
       ui.id = "snake-ui";
       ui.innerHTML = `<div id="snake-status"></div>`;
-      grid.insertAdjacentElement("afterend", ui);
+      container.insertAdjacentElement("afterend", ui);
       injectDPad(ui);
     }
 
@@ -361,23 +493,21 @@
 
   function deactivateSnake() {
     running = false;
-    if (loop) { clearInterval(loop); loop = null; }
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
     document.removeEventListener("keydown", onKeyDown);
 
-    const grid = findCardGrid();
-    if (grid) {
-      grid.classList.remove("snake-active");
-      grid.style.position = "";
-      grid.querySelectorAll(".snake-head,.snake-body,.snake-food,.snake-empty").forEach(el => {
-        el.classList.remove("snake-head", "snake-body", "snake-food", "snake-empty");
-      });
-    }
+    const container = findGridContainer();
+    if (container) container.style.position = "";
+
+    document.getElementById("snake-canvas")?.remove();
     document.getElementById("snake-ui")?.remove();
     document.getElementById("snake-end")?.remove();
+
+    canvas = null;
+    ctx    = null;
   }
 
   // ── Unlock banner ──────────────────────────────────────────────────────
-
   function showUnlockBanner() {
     if (document.getElementById("snake-unlock-banner")) return;
     const el = document.createElement("div");
@@ -391,7 +521,6 @@
   }
 
   // ── Entry point ────────────────────────────────────────────────────────
-
   function initSnake() {
     const score = getScore();
     const state = loadState();
@@ -407,7 +536,7 @@
 
     const isHome = window.location.pathname === "/";
 
-    // Auto-open if arriving from another page via /?play=snake
+    // Auto-open if navigating to /?play=snake from another page
     if (isHome && new URLSearchParams(window.location.search).get("play") === "snake") {
       window.history.replaceState({}, "", "/");
       const s = loadState();
@@ -417,12 +546,12 @@
     if (isHome && loadState().active) {
       activateSnake();
     } else if (!isHome && running) {
-      // Navigated away while game was running — stop gracefully
+      // Navigated away while game was running — clean up
       deactivateSnake();
     }
   }
 
-  // Mutual exclusivity: deactivate if another mode activates
+  // Mutual exclusivity: deactivate if any other mode fires
   document.addEventListener("mej:mode-activate", (e: Event) => {
     const detail = (e as CustomEvent<{ mode: string }>).detail;
     if (detail?.mode !== "snake") {
