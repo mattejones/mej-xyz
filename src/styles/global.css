@@ -287,237 +287,19 @@ html.scrolled #back-to-top {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   90s UNLOCKABLE EXPERIENCE
-   Activated by Nineties.astro when score >= 175 (level 3).
-   html[data-mode="90s"] controls everything.
+   90s UNLOCKABLE EXPERIENCE — infrastructure styles
+   (The visual/page-transformation CSS lives in Nineties.astro's
+   NINETIES_CSS string and is injected into <head> only when active.)
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Flying toasters tile — on body; inline JS styles are also set for belt-and-suspenders */
-html[data-mode="90s"] body {
-  background-image: url('/90s/background.png') !important;
-  background-repeat: repeat !important;
-  background-color: #000 !important;
-}
-
-/* Strip background off main/sections so the tile shows in gutters.
-   The centred .max-w-4xl container gets Windows grey — tile visible either side. */
-html[data-mode="90s"] main,
-html[data-mode="90s"] main section,
-html[data-mode="90s"] main > div,
-html[data-mode="90s"] footer {
-  background-color: transparent !important;
-}
-html[data-mode="90s"] main .max-w-4xl,
-html[data-mode="90s"] footer .max-w-4xl {
-  background-color: #c0c0c0;
-}
-
-/* No-background / low-bandwidth version (?nobg=1) */
-html[data-mode="90s"][data-nobg="true"] body {
-  background-image: none !important;
-  background-color: #c0c0c0 !important;
-}
-
-/* ── Typography ────────────────────────────────────────────────────────── */
-/* Everything inside main defaults to Times New Roman */
-html[data-mode="90s"] main * {
-  font-family: 'Times New Roman', Times, serif !important;
-}
-/* Headings get Arial — classic 90s combo */
-html[data-mode="90s"] main h1,
-html[data-mode="90s"] main h2,
-html[data-mode="90s"] main h3 {
-  font-family: Arial, Helvetica, sans-serif !important;
-}
-/* Cards keep readable dark text on their white/grey bg */
-html[data-mode="90s"] .nb-card,
-html[data-mode="90s"] .nb-card-accent {
-  background-color: #ffffff;
-  color: #000000;
-}
-
-/* Suppress hero dot-grid and shimmer — they look wrong on the dark tile */
-html[data-mode="90s"] .hero-grid::before,
-html[data-mode="90s"] .hero-grid::after {
-  display: none;
-}
-
-/* Suppress word-cloud hover effect — Comic Sans chaos clashes with 90s mode */
-html[data-mode="90s"] .card-bg {
-  display: none !important;
-}
-
-/* Locked state for the 90s toggle button in the footer */
+/* Toggle button locked state — always needed since button is in the DOM */
 #nineties-toggle-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-/* Classic 90s link colours */
-html[data-mode="90s"] a {
-  color: #0000ee;
-  text-decoration: underline;
-}
-html[data-mode="90s"] a:visited {
-  color: #551a8b;
-}
-html[data-mode="90s"] a:hover {
-  color: #ff0000;
-}
-
-/* ── Blink ────────────────────────────────────────────────────────────── */
-@keyframes blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
-}
-.blink {
-  animation: blink 1s step-end infinite;
-}
-
-/* ── Marquee strip ────────────────────────────────────────────────────── */
-#nineties-marquee {
-  background: #000080;
-  color: #ffff00;
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 13px;
-  font-weight: bold;
-  padding: 5px 0;
-  border-top: 2px solid #ffffff;
-  border-bottom: 2px solid #ffffff;
-  position: relative;
-  z-index: 55;
-}
-
-/* ── Footer strip ─────────────────────────────────────────────────────── */
-#nineties-footer {
-  text-align: center;
-  background: #c0c0c0;
-  border-top: 3px ridge #ffffff;
-  border-bottom: 3px groove #808080;
-  padding: 20px 16px;
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 12px;
-  color: #000;
-}
-
-.nineties-constbig {
-  margin-bottom: 16px;
-}
-.nineties-constbig img {
-  max-width: 100%;
-  height: auto;
-}
-
-.nineties-badges {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 16px;
-}
-.nineties-badges img {
-  display: block;
-  border: 1px solid #808080;
-}
-
-.nineties-counter-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 24px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.nineties-typloop {
-  height: 70px;
-  width: auto;
-}
-
-.nineties-dancing {
-  height: 80px;
-  width: auto;
-}
-
-.nineties-counter-text {
-  font-family: 'Times New Roman', Times, serif;
-  font-weight: bold;
-  font-size: 13px;
-  line-height: 1.8;
-  color: #000080;
-}
-
-.nineties-disclaimer {
-  font-size: 11px;
-  color: #000080;
-  line-height: 2.2;
-  font-family: 'Times New Roman', Times, serif;
-}
-
-.nineties-lowbw {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #0000ee;
-  text-decoration: underline;
-  font-size: 11px;
-}
-.nineties-lowbw img {
-  height: 22px;
-  width: auto;
-  vertical-align: middle;
-}
-.nineties-lowbw:hover {
-  color: #ff0000;
-}
-
-.nineties-off-btn {
-  background: none;
-  border: none;
-  color: #0000ee;
-  text-decoration: underline;
-  cursor: pointer;
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 11px;
-  padding: 0;
-}
-.nineties-off-btn:hover {
-  color: #ff0000;
-}
-
-/* ── In-content injections ────────────────────────────────────────────── */
-.nineties-hr {
-  display: block;
-  width: 100%;
-  max-width: 560px;
-  height: auto;
-  margin: 10px auto;
-}
-
-/* NEW! starburst — absolute corner badge on ArrowCards */
-.nb-arrow-card {
-  position: relative; /* ensure stacking context for the badge */
-}
-.nineties-new {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  height: 22px;
-  width: auto;
-  z-index: 10;
-  pointer-events: none;
-}
-
-/* Mailbox next to mailto links */
-.nineties-mailbox {
-  height: 20px;
-  width: auto;
-  vertical-align: middle;
-  margin-right: 5px;
-}
-
-/* ── Unlock announcement banner — matches site neo-brutalist style ──────── */
+/* Unlock banner — fixed position, neo-brutalist style, always available */
 #nineties-unlock-banner {
   position: fixed;
   top: 80px;
@@ -532,6 +314,7 @@ html[data-mode="90s"] a:hover {
   text-align: center;
   max-width: 90vw;
   min-width: 260px;
+  font-family: theme("fontFamily.sans");
 }
 #nineties-unlock-banner .nineties-unlock-title {
   font-weight: bold;
@@ -543,54 +326,7 @@ html[data-mode="90s"] a:hover {
   color: var(--text-muted);
 }
 
-/* ── ArrowCard → 90s HTML table ──────────────────────────────────────────── */
+/* Safety: hide card lists that were replaced by 90s tables */
 .nineties-hidden {
   display: none !important;
-}
-
-/* Classic HTML table as rendered by Netscape Navigator / IE 4 */
-.nineties-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 2px;
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 14px;
-  border: 3px outset #d4d0c8; /* Win98 raised frame */
-  background-color: #c0c0c0;  /* matches the page bg */
-}
-.nineties-table tr:nth-child(odd) td {
-  background-color: #ffffff;
-}
-.nineties-table tr:nth-child(even) td {
-  background-color: #ececec;
-}
-.nineties-table tr:hover td {
-  background-color: #000080; /* classic selection highlight */
-  color: #ffffff;
-}
-.nineties-table tr:hover td a {
-  color: #ffffff !important;
-}
-.nineties-table td {
-  border: 1px inset #c0c0c0;
-  padding: 3px 6px;
-  vertical-align: top;
-}
-.nineties-table-date {
-  color: #444;
-  white-space: nowrap;
-  font-size: 11px;
-  width: 76px;
-}
-.nineties-table-title a {
-  color: #0000cc;
-  text-decoration: underline;
-  font-weight: bold;
-}
-.nineties-table-title a:visited {
-  color: #800080;
-}
-.nineties-table-desc {
-  color: #333;
-  font-size: 12px;
 }
