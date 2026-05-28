@@ -5,6 +5,7 @@ import Footer from "@components/Footer.astro";
 import ScoreTracker from "@components/ScoreTracker.astro";
 import MejBadge from "@components/MejBadge.astro";
 import Nineties from "@components/Nineties.astro";
+import Snake   from "@components/Snake.astro";
 import { SITE } from "@consts";
 
 type Props = {
@@ -33,5 +34,7 @@ const { title, description } = Astro.props;
     <MejBadge />
     <!-- 90s unlockable experience — activates at score >= 175 -->
     <Nineties />
+    <!-- Snake mini-game — activates at score >= 100, homepage only -->
+    <Snake />
   </body>
 </html>

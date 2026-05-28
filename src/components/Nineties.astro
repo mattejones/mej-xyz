@@ -354,7 +354,13 @@ main a.nb-card-accent:hover {
       const state  = loadState();
       state.active = !state.active;
       saveState(state);
-      state.active ? applyNinetiesMode() : removeNinetiesMode();
+      if (state.active) {
+        // Exclusive: signal all other modes to deactivate
+        document.dispatchEvent(new CustomEvent("mej:mode-activate", { detail: { mode: "90s" } }));
+        applyNinetiesMode();
+      } else {
+        removeNinetiesMode();
+      }
       updateToggleButton(loadState());
     });
   }
@@ -604,4 +610,18 @@ main a.nb-card-accent:hover {
 
   document.addEventListener("DOMContentLoaded", initNineties);
   document.addEventListener("astro:after-swap",  initNineties);
+
+  // Mutual exclusivity: deactivate 90s if another mode activates
+  document.addEventListener("mej:mode-activate", (e: Event) => {
+    const detail = (e as CustomEvent<{ mode: string }>).detail;
+    if (detail?.mode !== "90s") {
+      const state = loadState();
+      if (state.active) {
+        state.active = false;
+        saveState(state);
+        removeNinetiesMode();
+        updateToggleButton(loadState());
+      }
+    }
+  });
 </script>

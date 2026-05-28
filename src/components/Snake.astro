@@ -1,0 +1,441 @@
+---
+// Snake.astro — Mini snake game on the homepage ArrowCard grid
+//
+// Unlocks at UNLOCK_SCORE (100 pts). Toggle via #snake-play-btn in Footer.
+// The two columns of ArrowCards on the homepage become a 2×N game board.
+// Tile classes (snake-head / snake-body / snake-food / snake-empty) are
+// added dynamically; CSS is in global.css (needs !important over scoped rules).
+//
+// Own storage key (mej_snake_v1) keeps unlock/active state.
+// Snake points are written directly to mej_score_v1.snakePts;
+// ScoreTracker re-reads that field on every flush so no race condition.
+//
+// Mutual exclusivity: dispatches mej:mode-activate {mode:"snake"} on open,
+// listens for the same event to close if another mode activates.
+---
+
+<script>
+  const SNAKE_KEY    = "mej_snake_v1";
+  const SCORE_KEY    = "mej_score_v1";
+  const UNLOCK_SCORE = 100;
+  const FOOD_PTS     = 5;   // site-score points per food eaten
+  const TICK_MS      = 420; // ms per game tick
+
+  // ── Score constants mirror ScoreTracker ───────────────────────────────
+  const VISIT_PTS     = 10;
+  const SCROLL_FACTOR = 0.5;
+  const CURSOR_FACTOR = 0.08;
+  const CURSOR_CAP    = 40;
+
+  // ── Types ─────────────────────────────────────────────────────────────
+
+  interface SnakeState { unlocked: boolean; active: boolean; }
+  type Pos = { row: number; col: number };
+
+  // ── Storage helpers ───────────────────────────────────────────────────
+
+  function loadState(): SnakeState {
+    try {
+      const raw = localStorage.getItem(SNAKE_KEY);
+      if (!raw) return { unlocked: false, active: false };
+      return { unlocked: false, active: false, ...JSON.parse(raw) };
+    } catch { return { unlocked: false, active: false }; }
+  }
+
+  function saveState(s: SnakeState) {
+    try { localStorage.setItem(SNAKE_KEY, JSON.stringify(s)); } catch {}
+  }
+
+  function getScore(): number {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      return raw ? (JSON.parse(raw).score ?? 0) : 0;
+    } catch { return 0; }
+  }
+
+  function addSnakePoints(pts: number) {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      const s   = raw ? JSON.parse(raw) : {};
+      s.snakePts  = (s.snakePts ?? 0) + pts;
+      // Recompute score using the same formula as ScoreTracker
+      s.score =
+        (s.visits?.length ?? 0) * VISIT_PTS +
+        Math.floor(Math.sqrt(s.scrollPx ?? 0) * SCROLL_FACTOR) +
+        Math.min(Math.floor(Math.sqrt(s.cursorPx ?? 0) * CURSOR_FACTOR), CURSOR_CAP) +
+        s.snakePts;
+      localStorage.setItem(SCORE_KEY, JSON.stringify(s));
+      const el = document.getElementById("score-display");
+      if (el) el.textContent = "SCORE: " + s.score;
+    } catch {}
+  }
+
+  // ── Play button ───────────────────────────────────────────────────────
+
+  function updatePlayButton(state: SnakeState) {
+    const btn = document.getElementById("snake-play-btn") as HTMLButtonElement | null;
+    if (!btn) return;
+
+    if (!state.unlocked) {
+      btn.disabled    = true;
+      btn.textContent = "Play 🔒";
+      btn.title       = `Unlocks at ${UNLOCK_SCORE} points`;
+      btn.classList.remove("nb-toggle-pressed");
+      return;
+    }
+
+    const isHome = window.location.pathname === "/";
+    btn.disabled    = false;
+    btn.title       = isHome
+      ? (state.active ? "Stop game" : "Play Snake")
+      : "Available on the homepage";
+    btn.textContent = (isHome && state.active) ? "Play: on" : "Play";
+    (isHome && state.active)
+      ? btn.classList.add("nb-toggle-pressed")
+      : btn.classList.remove("nb-toggle-pressed");
+  }
+
+  function wirePlayButton() {
+    const btn = document.getElementById("snake-play-btn");
+    if (!btn || btn.dataset.snakeWired) return;
+    btn.dataset.snakeWired = "1";
+
+    btn.addEventListener("click", () => {
+      const isHome = window.location.pathname === "/";
+
+      if (!isHome) {
+        // Navigate to homepage with auto-open param
+        window.location.href = "/?play=snake";
+        return;
+      }
+
+      const state  = loadState();
+      state.active = !state.active;
+      saveState(state);
+
+      if (state.active) {
+        // Exclusive: signal all other modes to deactivate
+        document.dispatchEvent(new CustomEvent("mej:mode-activate", { detail: { mode: "snake" } }));
+        activateSnake();
+      } else {
+        deactivateSnake();
+      }
+      updatePlayButton(loadState());
+    });
+  }
+
+  // ── Grid helpers ──────────────────────────────────────────────────────
+
+  let leftCards:  HTMLElement[] = [];
+  let rightCards: HTMLElement[] = [];
+  let ROWS = 0;
+
+  function findCardGrid(): HTMLElement | null {
+    // Find the two-section card grid on the homepage robustly
+    for (const div of document.querySelectorAll<HTMLElement>("main div.grid")) {
+      const sections = div.querySelectorAll<HTMLElement>(":scope > section");
+      if (sections.length === 2 && div.querySelectorAll(".nb-arrow-card").length > 0) {
+        return div;
+      }
+    }
+    return null;
+  }
+
+  function buildGrid(): boolean {
+    const grid = findCardGrid();
+    if (!grid) return false;
+    const sections = grid.querySelectorAll<HTMLElement>(":scope > section");
+    if (sections.length < 2) return false;
+    leftCards  = Array.from(sections[0].querySelectorAll<HTMLElement>(".nb-arrow-card"));
+    rightCards = Array.from(sections[1].querySelectorAll<HTMLElement>(".nb-arrow-card"));
+    ROWS       = Math.max(leftCards.length, rightCards.length);
+    return ROWS > 0;
+  }
+
+  function cardAt(p: Pos): HTMLElement | null {
+    return (p.col === 0 ? leftCards : rightCards)[p.row] ?? null;
+  }
+
+  function posEq(a: Pos, b: Pos) { return a.row === b.row && a.col === b.col; }
+
+  // ── Game state ────────────────────────────────────────────────────────
+
+  let snake:      Pos[]                           = [];
+  let food:       Pos | null                      = null;
+  let dir:        Pos                             = { row: 0, col: 1 };
+  let nextDir:    Pos                             = { row: 0, col: 1 };
+  let loop:       ReturnType<typeof setInterval> | null = null;
+  let running     = false;
+  let sessionPts  = 0;
+
+  function totalCells() { return leftCards.length + rightCards.length; }
+
+  function placeFood() {
+    const free: Pos[] = [];
+    for (let col = 0; col < 2; col++) {
+      const col_cards = col === 0 ? leftCards : rightCards;
+      for (let row = 0; row < col_cards.length; row++) {
+        if (!snake.some(p => posEq(p, { row, col }))) free.push({ row, col });
+      }
+    }
+    food = free.length ? free[Math.floor(Math.random() * free.length)] : null;
+  }
+
+  function renderCells() {
+    for (let col = 0; col < 2; col++) {
+      const col_cards = col === 0 ? leftCards : rightCards;
+      for (let row = 0; row < col_cards.length; row++) {
+        const card = col_cards[row];
+        const pos  = { row, col };
+        card.classList.remove("snake-head", "snake-body", "snake-food", "snake-empty");
+        if      (posEq(pos, snake[0]))                     card.classList.add("snake-head");
+        else if (food && posEq(pos, food))                 card.classList.add("snake-food");
+        else if (snake.slice(1).some(p => posEq(p, pos))) card.classList.add("snake-body");
+        else                                               card.classList.add("snake-empty");
+      }
+    }
+  }
+
+  function updateStatusUI() {
+    const el = document.getElementById("snake-status");
+    if (el) {
+      el.innerHTML =
+        `PTS +${sessionPts} &nbsp; LEN ${snake.length}/${totalCells()}<br>` +
+        `&larr; &uarr; &darr; &rarr; &nbsp; WASD`;
+    }
+  }
+
+  function tick() {
+    if (!running) return;
+    dir = nextDir;
+
+    const head = snake[0];
+    const next: Pos = { row: head.row + dir.row, col: head.col + dir.col };
+
+    // Out-of-bounds
+    const destCol = next.col === 0 ? leftCards : (next.col === 1 ? rightCards : null);
+    if (!destCol || next.row < 0 || next.row >= destCol.length) {
+      endGame(false); return;
+    }
+    // Self-collision
+    if (snake.some(p => posEq(p, next))) { endGame(false); return; }
+
+    snake.unshift(next);
+
+    if (food && posEq(next, food)) {
+      sessionPts += FOOD_PTS;
+      addSnakePoints(FOOD_PTS);
+      if (snake.length >= totalCells()) { endGame(true); return; }
+      placeFood();
+    } else {
+      snake.pop();
+    }
+
+    renderCells();
+    updateStatusUI();
+  }
+
+  function startRound() {
+    if (!buildGrid()) return;
+    running    = true;
+    sessionPts = 0;
+    // Start snake in the middle-left cell heading right
+    snake   = [{ row: Math.floor(ROWS / 2), col: 0 }];
+    dir     = { row: 0, col: 1 };
+    nextDir = { row: 0, col: 1 };
+    placeFood();
+    document.getElementById("snake-end")?.remove();
+    renderCells();
+    updateStatusUI();
+    if (loop) clearInterval(loop);
+    loop = setInterval(tick, TICK_MS);
+  }
+
+  function endGame(won: boolean) {
+    running = false;
+    if (loop) { clearInterval(loop); loop = null; }
+    renderCells();
+    showEndScreen(won);
+  }
+
+  function showEndScreen(won: boolean) {
+    const grid = findCardGrid();
+    if (!grid) return;
+    grid.style.position = "relative";
+
+    const end = document.createElement("div");
+    end.id = "snake-end";
+    end.innerHTML = `
+      <div class="snake-end-title">${won ? "🐍 YOU WIN!" : "GAME OVER"}</div>
+      <div class="snake-end-score">+${sessionPts} PTS ADDED TO SCORE</div>
+      <div class="snake-end-actions">
+        <button class="snake-end-btn" id="snake-restart-btn">PLAY AGAIN</button>
+        <button class="snake-end-btn snake-end-close" id="snake-close-btn">CLOSE</button>
+      </div>
+    `;
+    grid.appendChild(end);
+
+    document.getElementById("snake-restart-btn")?.addEventListener("click", () => {
+      end.remove();
+      startRound();
+    });
+    document.getElementById("snake-close-btn")?.addEventListener("click", () => {
+      const s  = loadState();
+      s.active = false;
+      saveState(s);
+      deactivateSnake();
+      updatePlayButton(loadState());
+    });
+  }
+
+  // ── Controls ──────────────────────────────────────────────────────────
+
+  const KEY_MAP: Record<string, Pos> = {
+    ArrowUp:    { row: -1, col: 0 }, w: { row: -1, col: 0 },
+    ArrowDown:  { row:  1, col: 0 }, s: { row:  1, col: 0 },
+    ArrowLeft:  { row:  0, col: -1 }, a: { row:  0, col: -1 },
+    ArrowRight: { row:  0, col:  1 }, d: { row:  0, col:  1 },
+  };
+
+  function applyDir(d: Pos) {
+    // Reject 180° reversals
+    if (d.row !== -dir.row || d.col !== -dir.col) nextDir = d;
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (!running) return;
+    const d = KEY_MAP[e.key];
+    if (d) { applyDir(d); e.preventDefault(); }
+  }
+
+  function injectDPad(container: HTMLElement) {
+    if (document.getElementById("snake-dpad")) return;
+    const el = document.createElement("div");
+    el.id = "snake-dpad";
+    el.innerHTML = `
+      <button class="snake-dpad-btn" data-dir="up">↑</button>
+      <div class="snake-dpad-row">
+        <button class="snake-dpad-btn" data-dir="left">←</button>
+        <span class="snake-dpad-center"></span>
+        <button class="snake-dpad-btn" data-dir="right">→</button>
+      </div>
+      <button class="snake-dpad-btn" data-dir="down">↓</button>
+    `;
+    el.querySelectorAll<HTMLButtonElement>(".snake-dpad-btn").forEach(btn => {
+      const dirMap: Record<string, Pos> = {
+        up:    KEY_MAP.ArrowUp,
+        down:  KEY_MAP.ArrowDown,
+        left:  KEY_MAP.ArrowLeft,
+        right: KEY_MAP.ArrowRight,
+      };
+      btn.addEventListener("click", () => {
+        const d = dirMap[btn.dataset.dir!];
+        if (d) applyDir(d);
+      });
+    });
+    container.appendChild(el);
+  }
+
+  // ── Activate / deactivate ─────────────────────────────────────────────
+
+  function activateSnake() {
+    if (window.location.pathname !== "/") return;
+    if (!buildGrid()) return;
+
+    const grid = findCardGrid();
+    if (!grid) return;
+    grid.classList.add("snake-active");
+
+    // Game UI bar below the grid
+    if (!document.getElementById("snake-ui")) {
+      const ui = document.createElement("div");
+      ui.id = "snake-ui";
+      ui.innerHTML = `<div id="snake-status"></div>`;
+      grid.insertAdjacentElement("afterend", ui);
+      injectDPad(ui);
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    startRound();
+  }
+
+  function deactivateSnake() {
+    running = false;
+    if (loop) { clearInterval(loop); loop = null; }
+    document.removeEventListener("keydown", onKeyDown);
+
+    const grid = findCardGrid();
+    if (grid) {
+      grid.classList.remove("snake-active");
+      grid.style.position = "";
+      grid.querySelectorAll(".snake-head,.snake-body,.snake-food,.snake-empty").forEach(el => {
+        el.classList.remove("snake-head", "snake-body", "snake-food", "snake-empty");
+      });
+    }
+    document.getElementById("snake-ui")?.remove();
+    document.getElementById("snake-end")?.remove();
+  }
+
+  // ── Unlock banner ──────────────────────────────────────────────────────
+
+  function showUnlockBanner() {
+    if (document.getElementById("snake-unlock-banner")) return;
+    const el = document.createElement("div");
+    el.id = "snake-unlock-banner";
+    el.innerHTML = `
+      <div class="snake-unlock-title">🐍 Achievement Unlocked: Snake</div>
+      <div class="snake-unlock-sub">Hit Play in the footer — homepage only</div>
+    `;
+    document.body.insertAdjacentElement("afterbegin", el);
+    setTimeout(() => el.remove(), 5000);
+  }
+
+  // ── Entry point ────────────────────────────────────────────────────────
+
+  function initSnake() {
+    const score = getScore();
+    const state = loadState();
+
+    if (score >= UNLOCK_SCORE && !state.unlocked) {
+      state.unlocked = true;
+      saveState(state);
+      showUnlockBanner();
+    }
+
+    updatePlayButton(loadState());
+    wirePlayButton();
+
+    const isHome = window.location.pathname === "/";
+
+    // Auto-open if arriving from another page via /?play=snake
+    if (isHome && new URLSearchParams(window.location.search).get("play") === "snake") {
+      window.history.replaceState({}, "", "/");
+      const s = loadState();
+      if (!s.active) { s.active = true; saveState(s); }
+    }
+
+    if (isHome && loadState().active) {
+      activateSnake();
+    } else if (!isHome && running) {
+      // Navigated away while game was running — stop gracefully
+      deactivateSnake();
+    }
+  }
+
+  // Mutual exclusivity: deactivate if another mode activates
+  document.addEventListener("mej:mode-activate", (e: Event) => {
+    const detail = (e as CustomEvent<{ mode: string }>).detail;
+    if (detail?.mode !== "snake") {
+      const s = loadState();
+      if (s.active) {
+        s.active = false;
+        saveState(s);
+        deactivateSnake();
+        updatePlayButton(loadState());
+      }
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", initSnake);
+  document.addEventListener("astro:after-swap",  initSnake);
+</script>
