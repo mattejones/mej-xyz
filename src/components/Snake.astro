@@ -1,13 +1,11 @@
 ---
-// Snake.astro — Canvas-based Snake mini-game on the homepage
+// Snake.astro — Pop-up Snake mini-game, available site-wide
 //
-// A <canvas> is placed over the two-column card-grid section of the homepage.
-// Each ArrowCard's bounding rect is computed at activation time and rendered as
-// a neo-brutalist obstacle box. The snake navigates the open space around them.
+// Opens as a fixed modal overlay. Pure canvas game — no relationship to
+// any page content. The modal is a neo-brutalist card with a title bar,
+// canvas game board, status strip, and D-pad for touch.
 //
 // Unlocks at UNLOCK_SCORE (100 pts). Toggle via #snake-play-btn in Footer.
-// Homepage only — clicking Play from another page navigates to /?play=snake.
-//
 // Own storage key: mej_snake_v1 { unlocked, active }
 // Score integration: writes directly to mej_score_v1.snakePts
 // Mutual exclusivity: dispatches / listens for mej:mode-activate custom event
@@ -17,8 +15,8 @@
   const SNAKE_KEY    = "mej_snake_v1";
   const SCORE_KEY    = "mej_score_v1";
   const UNLOCK_SCORE = 100;
-  const FOOD_PTS     = 5;    // site-score points per food eaten
-  const TICK_MS      = 180;  // ms per game step
+  const FOOD_PTS     = 5;
+  const TICK_MS      = 155; // ms per game step (~6.5 moves/sec)
 
   // Score constants — must mirror ScoreTracker.astro exactly
   const VISIT_PTS     = 10;
@@ -28,8 +26,7 @@
 
   // ── Types ─────────────────────────────────────────────────────────────
   interface SnakeState { unlocked: boolean; active: boolean; }
-  type Pos  = { row: number; col: number };
-  type Rect = { x: number; y: number; w: number; h: number };
+  type Pos = { row: number; col: number };
 
   // ── Storage helpers ───────────────────────────────────────────────────
   function loadState(): SnakeState {
@@ -39,22 +36,19 @@
       return { unlocked: false, active: false, ...JSON.parse(raw) };
     } catch { return { unlocked: false, active: false }; }
   }
-
   function saveState(s: SnakeState) {
     try { localStorage.setItem(SNAKE_KEY, JSON.stringify(s)); } catch {}
   }
-
   function getScore(): number {
     try {
       const raw = localStorage.getItem(SCORE_KEY);
       return raw ? (JSON.parse(raw).score ?? 0) : 0;
     } catch { return 0; }
   }
-
   function addSnakePoints(pts: number) {
     try {
       const raw = localStorage.getItem(SCORE_KEY);
-      const s   = raw ? JSON.parse(raw) : {};
+      const s = raw ? JSON.parse(raw) : {};
       s.snakePts = (s.snakePts ?? 0) + pts;
       s.score =
         (s.visits?.length ?? 0) * VISIT_PTS +
@@ -71,8 +65,6 @@
   function cssVar(name: string): string {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
-
-  /** Convert a #RRGGBB or #RGB hex colour to rgba(..., alpha) */
   function hexAlpha(hex: string, alpha: number): string {
     const h = hex.replace(/^#/, "");
     let r: number, g: number, b: number;
@@ -94,81 +86,65 @@
   let ctx: CanvasRenderingContext2D | null = null;
   let N_COLS = 0;
   let N_ROWS = 0;
-  let CELL   = 32;            // px per logical game cell
+  let CELL   = 24;
 
-  let obstacles: boolean[][] = [];   // obstacles[row][col]
-  let cardRects: Rect[]      = [];   // ArrowCard rects relative to canvas origin
-
-  function findGridContainer(): HTMLElement | null {
-    // The two-section content grid on the homepage (not the hero grid)
-    for (const div of document.querySelectorAll<HTMLElement>("main div.grid")) {
-      const sections = div.querySelectorAll<HTMLElement>(":scope > section");
-      if (sections.length === 2 && div.querySelectorAll(".nb-arrow-card").length > 0) {
-        return div;
-      }
-    }
-    return null;
+  /**
+   * Compute a square canvas side length that fits comfortably in the viewport.
+   * Leaves ~260 px of vertical headroom for modal chrome (header + status + d-pad).
+   */
+  function computeSize(): number {
+    const maxW = window.innerWidth  - 48;
+    const maxH = window.innerHeight - 260;
+    return Math.max(240, Math.min(520, Math.min(maxW, maxH)));
   }
 
-  function setupCanvas(): boolean {
-    const container = findGridContainer();
-    if (!container) return false;
+  function createModal(): boolean {
+    document.getElementById("snake-modal")?.remove();
 
-    const cw = container.clientWidth;
-    const ch = container.offsetHeight;
-    if (cw < 80 || ch < 80) return false;
+    const size = computeSize();
+    CELL   = Math.max(20, Math.min(28, Math.floor(size / 20)));
+    N_COLS = Math.floor(size / CELL);
+    N_ROWS = N_COLS; // square board
+    const cw = N_COLS * CELL;
+    const ch = N_ROWS * CELL;
 
-    // ~20 cells across on desktop; clamp cell size between 24-36 px
-    CELL   = Math.max(24, Math.min(36, Math.floor(cw / 20)));
-    N_COLS = Math.floor(cw / CELL);
-    N_ROWS = Math.floor(ch / CELL);
-    if (N_COLS < 3 || N_ROWS < 3) return false;
+    const modal = document.createElement("div");
+    modal.id = "snake-modal";
+    modal.innerHTML = `
+      <div id="snake-modal-box">
+        <div id="snake-modal-header">
+          <span class="snake-modal-title">🐍 SNAKE</span>
+          <button id="snake-modal-close" aria-label="Close Snake">✕</button>
+        </div>
+        <div id="snake-modal-canvas-wrap">
+          <canvas id="snake-canvas" width="${cw}" height="${ch}" style="display:block;"></canvas>
+        </div>
+        <div id="snake-ui">
+          <div id="snake-status"></div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
 
-    // Remove any previous canvas
-    document.getElementById("snake-canvas")?.remove();
+    document.getElementById("snake-modal-close")
+      ?.addEventListener("click", closeGame);
 
-    canvas = document.createElement("canvas");
-    canvas.id     = "snake-canvas";
-    canvas.width  = N_COLS * CELL;
-    canvas.height = N_ROWS * CELL;
-    // CSS size matches the container's actual pixel width/height
-    canvas.style.cssText =
-      `position:absolute;top:0;left:0;display:block;z-index:5;` +
-      `width:${cw}px;height:${ch}px;`;
-
-    ctx = canvas.getContext("2d");
+    canvas = document.getElementById("snake-canvas") as HTMLCanvasElement;
+    ctx = canvas?.getContext("2d") ?? null;
     if (!ctx) return false;
 
-    container.style.position = "relative";
-    container.appendChild(canvas);
+    const ui = document.getElementById("snake-ui");
+    if (ui) injectDPad(ui);
 
-    computeObstacles(container);
     return true;
   }
 
-  function computeObstacles(container: HTMLElement) {
-    obstacles = Array.from({ length: N_ROWS }, () => new Array<boolean>(N_COLS).fill(false));
-    cardRects = [];
-
-    const cr = container.getBoundingClientRect();
-
-    container.querySelectorAll<HTMLElement>(".nb-arrow-card").forEach(card => {
-      const r  = card.getBoundingClientRect();
-      const rx = r.left - cr.left;
-      const ry = r.top  - cr.top;
-      cardRects.push({ x: rx, y: ry, w: r.width, h: r.height });
-
-      // Mark every cell that overlaps this card as an obstacle
-      const c0 = Math.max(0,      Math.floor(rx           / CELL));
-      const c1 = Math.min(N_COLS, Math.ceil((rx + r.width)  / CELL));
-      const r0 = Math.max(0,      Math.floor(ry           / CELL));
-      const r1 = Math.min(N_ROWS, Math.ceil((ry + r.height) / CELL));
-      for (let row = r0; row < r1; row++) {
-        for (let col = c0; col < c1; col++) {
-          obstacles[row][col] = true;
-        }
-      }
-    });
+  function closeGame() {
+    const s = loadState();
+    s.active = false;
+    saveState(s);
+    deactivateSnake();
+    updatePlayButton(loadState());
   }
 
   // ── Game state ────────────────────────────────────────────────────────
@@ -183,9 +159,8 @@
 
   function posEq(a: Pos, b: Pos) { return a.row === b.row && a.col === b.col; }
 
-  function isFree(p: Pos): boolean {
-    if (p.row < 0 || p.row >= N_ROWS || p.col < 0 || p.col >= N_COLS) return false;
-    return !obstacles[p.row][p.col];
+  function inBounds(p: Pos): boolean {
+    return p.row >= 0 && p.row < N_ROWS && p.col >= 0 && p.col < N_COLS;
   }
 
   function placeFood() {
@@ -193,7 +168,7 @@
     for (let row = 0; row < N_ROWS; row++) {
       for (let col = 0; col < N_COLS; col++) {
         const p = { row, col };
-        if (isFree(p) && !snake.some(s => posEq(s, p))) free.push(p);
+        if (!snake.some(s => posEq(s, p))) free.push(p);
       }
     }
     food = free.length ? free[Math.floor(Math.random() * free.length)] : null;
@@ -204,7 +179,7 @@
     const head = snake[0];
     const next: Pos = { row: head.row + dir.row, col: head.col + dir.col };
 
-    if (!isFree(next))                   { endGame(false); return; }
+    if (!inBounds(next))                 { endGame(false); return; }
     if (snake.some(p => posEq(p, next))) { endGame(false); return; }
 
     snake.unshift(next);
@@ -213,7 +188,7 @@
       sessionPts += FOOD_PTS;
       addSnakePoints(FOOD_PTS);
       placeFood();
-      if (!food) { endGame(true); return; } // no free cells left — you win
+      if (!food) { endGame(true); return; } // board full — you win
     } else {
       snake.pop();
     }
@@ -223,18 +198,8 @@
   function startRound() {
     running    = true;
     sessionPts = 0;
-
-    // Find the first free cell for the snake's starting position
-    let start: Pos | null = null;
-    outer:
-    for (let row = 0; row < N_ROWS; row++) {
-      for (let col = 0; col < N_COLS; col++) {
-        if (isFree({ row, col })) { start = { row, col }; break outer; }
-      }
-    }
-    if (!start) { running = false; return; }
-
-    snake   = [start];
+    // Start roughly in the middle-left, heading right
+    snake   = [{ row: Math.floor(N_ROWS / 2), col: 2 }];
     dir     = { row: 0, col: 1 };
     nextDir = { row: 0, col: 1 };
     placeFood();
@@ -259,7 +224,7 @@
   function endGame(won: boolean) {
     running = false;
     if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
-    draw();         // render final game state before overlay appears
+    draw(); // render final state before end screen appears
     showEndScreen(won);
   }
 
@@ -270,40 +235,25 @@
     const bg      = cssVar("--bg")       || "#F9F7F2";
     const accent  = cssVar("--accent")   || "#3B5BDB";
     const accent2 = cssVar("--accent-2") || "#FF6B35";
-    const cardBg  = cssVar("--card-bg")  || "#FFFFFF";
     const border  = cssVar("--border")   || "#000000";
-
     const W = canvas.width;
     const H = canvas.height;
 
-    // 1. Page background
+    // 1. Background
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // 2. Subtle dot grid in open (non-obstacle) cells — mirrors the hero section
-    ctx.fillStyle = hexAlpha(accent, 0.18);
+    // 2. Dot grid — mirrors the hero section dot pattern
+    ctx.fillStyle = hexAlpha(accent, 0.15);
     for (let row = 0; row < N_ROWS; row++) {
       for (let col = 0; col < N_COLS; col++) {
-        if (!obstacles[row][col]) {
-          ctx.beginPath();
-          ctx.arc(col * CELL + CELL / 2, row * CELL + CELL / 2, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        ctx.beginPath();
+        ctx.arc(col * CELL + CELL / 2, row * CELL + CELL / 2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
-    // 3. ArrowCard obstacles — rendered as neo-brutalist nb-card boxes
-    ctx.lineWidth = 2;
-    for (const r of cardRects) {
-      ctx.fillStyle = border;
-      ctx.fillRect(r.x + 4, r.y + 4, r.w, r.h);   // drop shadow
-      ctx.fillStyle = cardBg;
-      ctx.fillRect(r.x, r.y, r.w, r.h);             // card face
-      ctx.strokeStyle = border;
-      ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2); // border
-    }
-
-    // 4. Food — pulsing accent-2 square with nb-card shadow
+    // 3. Food — pulsing accent-2 square with neo-brutalist shadow
     if (food) {
       const pulse = 0.78 + 0.22 * Math.abs(Math.sin(performance.now() / 280));
       const fw  = CELL * pulse;
@@ -315,17 +265,18 @@
       ctx.fillStyle = accent2;
       ctx.fillRect(fx, fy, fw, fw);
       ctx.strokeStyle = border;
+      ctx.lineWidth = 2;
       ctx.strokeRect(fx + 1, fy + 1, fw - 2, fw - 2);
     }
 
-    // 5. Snake body (semi-transparent accent, inset slightly)
+    // 4. Snake body (semi-transparent, inset)
     ctx.fillStyle = hexAlpha(accent, 0.5);
     for (let i = 1; i < snake.length; i++) {
       const s = snake[i];
       ctx.fillRect(s.col * CELL + 3, s.row * CELL + 3, CELL - 6, CELL - 6);
     }
 
-    // 6. Snake head (full accent, bordered)
+    // 5. Snake head (full accent, bordered)
     if (snake.length > 0) {
       const h = snake[0];
       ctx.fillStyle   = accent;
@@ -336,20 +287,20 @@
     }
   }
 
-  // ── Status UI ─────────────────────────────────────────────────────────
+  // ── Status strip ──────────────────────────────────────────────────────
   function updateStatusUI() {
     const el = document.getElementById("snake-status");
     if (el) {
       el.innerHTML =
-        `PTS +${sessionPts} &nbsp; LEN ${snake.length}<br>` +
-        `&larr; &uarr; &darr; &rarr; &nbsp; WASD`;
+        `PTS +${sessionPts} &nbsp;&nbsp; LEN ${snake.length}<br>` +
+        `&larr; &uarr; &darr; &rarr; &nbsp; WASD &nbsp; ESC`;
     }
   }
 
   // ── End screen ────────────────────────────────────────────────────────
   function showEndScreen(won: boolean) {
-    const container = findGridContainer();
-    if (!container) return;
+    const wrap = document.getElementById("snake-modal-canvas-wrap");
+    if (!wrap) return;
 
     const end = document.createElement("div");
     end.id = "snake-end";
@@ -361,19 +312,12 @@
         <button class="snake-end-btn snake-end-close" id="snake-close-btn">CLOSE</button>
       </div>
     `;
-    container.appendChild(end);
+    wrap.appendChild(end);
 
-    document.getElementById("snake-restart-btn")?.addEventListener("click", () => {
-      end.remove();
-      startRound();
-    });
-    document.getElementById("snake-close-btn")?.addEventListener("click", () => {
-      const s = loadState();
-      s.active = false;
-      saveState(s);
-      deactivateSnake();
-      updatePlayButton(loadState());
-    });
+    document.getElementById("snake-restart-btn")
+      ?.addEventListener("click", () => { end.remove(); startRound(); });
+    document.getElementById("snake-close-btn")
+      ?.addEventListener("click", closeGame);
   }
 
   // ── Controls ──────────────────────────────────────────────────────────
@@ -390,6 +334,7 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape") { closeGame(); return; }
     if (!running) return;
     const d = KEY_MAP[e.key];
     if (d) { applyDir(d); e.preventDefault(); }
@@ -425,7 +370,6 @@
   function updatePlayButton(state: SnakeState) {
     const btn = document.getElementById("snake-play-btn") as HTMLButtonElement | null;
     if (!btn) return;
-
     if (!state.unlocked) {
       btn.disabled    = true;
       btn.textContent = "Play 🔒";
@@ -433,14 +377,10 @@
       btn.classList.remove("nb-toggle-pressed");
       return;
     }
-
-    const isHome = window.location.pathname === "/";
     btn.disabled    = false;
-    btn.title       = isHome
-      ? (state.active ? "Stop game" : "Play Snake")
-      : "Available on the homepage";
-    btn.textContent = (isHome && state.active) ? "Play: on" : "Play";
-    (isHome && state.active)
+    btn.title       = state.active ? "Close Snake" : "Play Snake";
+    btn.textContent = state.active ? "Play: on" : "Play";
+    state.active
       ? btn.classList.add("nb-toggle-pressed")
       : btn.classList.remove("nb-toggle-pressed");
   }
@@ -449,18 +389,12 @@
     const btn = document.getElementById("snake-play-btn");
     if (!btn || btn.dataset.snakeWired) return;
     btn.dataset.snakeWired = "1";
-
     btn.addEventListener("click", () => {
-      if (window.location.pathname !== "/") {
-        window.location.href = "/?play=snake";
-        return;
-      }
       const state  = loadState();
       state.active = !state.active;
       saveState(state);
-
       if (state.active) {
-        // Exclusive: tell all other modes to deactivate
+        // Exclusive: signal all other modes to deactivate
         document.dispatchEvent(new CustomEvent("mej:mode-activate", { detail: { mode: "snake" } }));
         activateSnake();
       } else {
@@ -472,21 +406,7 @@
 
   // ── Activate / deactivate ─────────────────────────────────────────────
   function activateSnake() {
-    if (window.location.pathname !== "/") return;
-    if (!setupCanvas()) return;
-
-    const container = findGridContainer();
-    if (!container) return;
-
-    // Game UI bar (status + D-pad) below the grid
-    if (!document.getElementById("snake-ui")) {
-      const ui = document.createElement("div");
-      ui.id = "snake-ui";
-      ui.innerHTML = `<div id="snake-status"></div>`;
-      container.insertAdjacentElement("afterend", ui);
-      injectDPad(ui);
-    }
-
+    if (!createModal()) return;
     document.addEventListener("keydown", onKeyDown);
     startRound();
   }
@@ -495,26 +415,19 @@
     running = false;
     if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
     document.removeEventListener("keydown", onKeyDown);
-
-    const container = findGridContainer();
-    if (container) container.style.position = "";
-
-    document.getElementById("snake-canvas")?.remove();
-    document.getElementById("snake-ui")?.remove();
-    document.getElementById("snake-end")?.remove();
-
+    document.getElementById("snake-modal")?.remove();
     canvas = null;
     ctx    = null;
   }
 
-  // ── Unlock banner ──────────────────────────────────────────────────────
+  // ── Unlock banner ─────────────────────────────────────────────────────
   function showUnlockBanner() {
     if (document.getElementById("snake-unlock-banner")) return;
     const el = document.createElement("div");
     el.id = "snake-unlock-banner";
     el.innerHTML = `
       <div class="snake-unlock-title">🐍 Achievement Unlocked: Snake</div>
-      <div class="snake-unlock-sub">Hit Play in the footer — homepage only</div>
+      <div class="snake-unlock-sub">Hit Play in the footer to start</div>
     `;
     document.body.insertAdjacentElement("afterbegin", el);
     setTimeout(() => el.remove(), 5000);
@@ -525,33 +438,25 @@
     const score = getScore();
     const state = loadState();
 
+    // Check for new unlock
     if (score >= UNLOCK_SCORE && !state.unlocked) {
       state.unlocked = true;
       saveState(state);
       showUnlockBanner();
     }
 
-    updatePlayButton(loadState());
-    wirePlayButton();
-
-    const isHome = window.location.pathname === "/";
-
-    // Auto-open if navigating to /?play=snake from another page
-    if (isHome && new URLSearchParams(window.location.search).get("play") === "snake") {
-      window.history.replaceState({}, "", "/");
-      const s = loadState();
-      if (!s.active) { s.active = true; saveState(s); }
-    }
-
-    if (isHome && loadState().active) {
-      activateSnake();
-    } else if (!isHome && running) {
-      // Navigated away while game was running — clean up
+    // Always close the game on page navigation — the modal is transient
+    if (state.active) {
+      state.active = false;
+      saveState(state);
       deactivateSnake();
     }
+
+    updatePlayButton(loadState());
+    wirePlayButton();
   }
 
-  // Mutual exclusivity: deactivate if any other mode fires
+  // Mutual exclusivity — deactivate if any other mode activates
   document.addEventListener("mej:mode-activate", (e: Event) => {
     const detail = (e as CustomEvent<{ mode: string }>).detail;
     if (detail?.mode !== "snake") {
