@@ -333,8 +333,9 @@ html.scrolled #back-to-top {
 
 /* ═══════════════════════════════════════════════════════════════════════
    SNAKE MINI-GAME
-   Board = the 2-column ArrowCard grid on the homepage.
-   CSS classes are applied to existing .nb-arrow-card elements at runtime.
+   A <canvas> is placed over the ArrowCard grid on the homepage.
+   ArrowCards become obstacle boxes drawn on the canvas.
+   The snake navigates the open space between / around them.
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* Play button locked state */
@@ -369,55 +370,6 @@ html.scrolled #back-to-top {
 #snake-unlock-banner .snake-unlock-sub {
   font-size: 12px;
   color: var(--text-muted);
-}
-
-/* Tile states — !important to override ArrowCard's scoped styles */
-.snake-active .nb-arrow-card {
-  pointer-events: none;
-  transition: background-color 0.12s ease, opacity 0.12s ease,
-              box-shadow 0.12s ease !important;
-}
-
-.nb-arrow-card.snake-empty {
-  opacity: 0.28 !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.nb-arrow-card.snake-head {
-  background-color: var(--accent) !important;
-  color: #ffffff !important;
-  box-shadow: none !important;
-  transform: none !important;
-  opacity: 1 !important;
-}
-.nb-arrow-card.snake-head .card-title,
-.nb-arrow-card.snake-head .card-desc-inner {
-  color: #ffffff !important;
-}
-.nb-arrow-card.snake-head svg {
-  color: #ffffff !important;
-  stroke: #ffffff !important;
-}
-
-.nb-arrow-card.snake-body {
-  background-color: color-mix(in srgb, var(--accent) 28%, var(--card-bg)) !important;
-  box-shadow: none !important;
-  transform: none !important;
-  opacity: 1 !important;
-}
-
-.nb-arrow-card.snake-food {
-  background-color: var(--accent-2) !important;
-  box-shadow: 4px 4px 0 var(--border) !important;
-  transform: none !important;
-  opacity: 1 !important;
-  animation: snake-food-pulse 0.75s ease-in-out infinite;
-}
-
-@keyframes snake-food-pulse {
-  0%, 100% { box-shadow: 4px 4px 0 var(--border); }
-  50%       { box-shadow: 6px 6px 0 var(--border); filter: brightness(1.06); }
 }
 
 /* Game UI bar */
