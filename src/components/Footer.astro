@@ -32,6 +32,14 @@ import { SITE, SOCIALS } from "@consts";
         >
           <span id="color-toggle-label">Colour: on</span>
         </button>
+        <!-- 90s mode toggle — locked until score >= 175, wired by Nineties.astro -->
+        <button
+          id="nineties-toggle-btn"
+          aria-label="Toggle 90s mode"
+          class="nb-card px-3 py-1.5 font-sans font-bold text-xs uppercase tracking-widest"
+          disabled
+          title="Unlocks at 175 points"
+        >90s: 🔒</button>
       </div>
     </div>
   </div>
