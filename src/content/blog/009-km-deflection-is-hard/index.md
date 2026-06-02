@@ -25,7 +25,7 @@ So you probably have some ideas on how this can go wrong, but lets explore it.
 - Can all users who access knowledge articles create tickets or requests to the support team
 - Are you accurately measuring the number of article views that were provided by a support person after a ticket was created? What if the ticket was forwarded to another person, how are you measuring this effect?
 - Do customers always have the intent to create a support ticket, or were they only looking for a knowledge article in the first place?
-- How sure are you that your UI support flows make sense to your customers? Are they leveraging the ticket reporting mechinism to find the information they are looking for?
+- How sure are you that your UI support flows make sense to your customers? Are they leveraging the ticket reporting mechanism to find the information they are looking for?
 
 ### Implicit and Explicit Deflection
 Some teams like to break down the deflection ratios into implicit and explicit deflection, whereby explicit deflection is where a customer didn't create a ticket because a knowledge article was shown to them. Implicit deflection is counting just the times an article was viewed, for brevity, I will focus on explicit deflection concerns here. 

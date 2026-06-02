@@ -25,7 +25,7 @@ The first step was to represent a leaf. To keep things simple, I settled on a 2D
 
 ![[early-chopper-output.png|464]]
 
-After a cut, the pieces get scraped back into a central pile, kindof the way you'd sweep them together with the flat of a knife and then the process repeats.
+After a cut, the pieces get scraped back into a central pile, kind of the way you'd sweep them together with the flat of a knife and then the process repeats.
 
 Some immediate design decisions came up that I hadn't expected:
 

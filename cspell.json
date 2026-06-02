@@ -1,0 +1,72 @@
+{
+  "version": "0.2",
+  "language": "en-GB",
+  "dictionaries": ["en-gb"],
+  "ignorePaths": [
+    "node_modules/**",
+    "dist/**",
+    ".astro/**",
+    "public/**",
+    ".git/**",
+    "*.lock",
+    "package-lock.json"
+  ],
+  "overrides": [
+    {
+      "filename": "**/*.astro",
+      "languageId": "astro"
+    },
+    {
+      "filename": "**/*.{ts,mjs,cjs}",
+      "ignoreRegExpList": ["\\$[a-zA-Z_][a-zA-Z0-9_]*"]
+    }
+  ],
+  "words": [
+    "Aircall", "TIBCO", "MuleSoft", "HubSpot", "Salesforce",
+    "Micronaut", "micronauts", "Proxmox", "komorebi", "komorebic",
+    "Ollama", "Mapbox", "mapbox", "matplotlib", "Matplotlib",
+    "numpy", "asyncio", "scikit", "uvicorn", "Marimo",
+    "PKCE", "virtio", "Virtio", "tcpdump", "pcidump",
+    "gitmoji", "WASD", "vmbr", "PVID", "msix",
+    "lladdr", "llprio", "autoselect", "blocklists",
+    "virtqueue", "fwbr", "fwln", "fwpr", "veth",
+    "NETGEAR", "Powerconnect", "Zyxel", "Linksys", "Velops",
+    "Mbps", "rackable", "homelab", "homelabbing", "Homelab",
+    "fontsource", "grotesk", "katex", "Neue",
+    "doomscrolling", "neocities", "realdice",
+    "atat", "ATAT", "playhistory", "narki", "astroautomata",
+    "selcobw", "selcobuilders", "Nonic", "rowancodes", "dnschecker",
+    "geospatial", "Geocodes", "explainability",
+    "cutover", "deadlinks", "diffable", "barebones", "refurbed",
+    "backboxes", "netgear", "WHOIS",
+    "Lanzarote", "Hitchin", "Letchworth", "Harpenden",
+    "Kolmogorov", "Smoluchowski", "Bertoin", "Mascheroni",
+    "Hodgman", "Crofton", "blackmud", "mudlet", "Tansar",
+    "Avicii", "Naklab", "Winehouse", "Ronson", "Stereophonics",
+    "Kygo", "Coldplay", "Zerb", "Lumineers", "Helsloot",
+    "Tinlicker", "Maribou", "Deepend", "Toploader", "Birdy", "Moby",
+    "mattjones", "pkgid", "prebuild", "postbuild",
+    "gpgcheck", "gpgkey", "pkgs", "errno", "ELIFECYCLE",
+    "vimrc", "uuidgen", "journalctl", "mvnw", "fetchone",
+    "pubdate", "holo", "scanlines", "nobg", "lowbw",
+    "constbig", "typloop", "vcounter", "commnow", "constru",
+    "rboard", "ntrans", "reff", "pysr", "unlockable",
+    "reparenting", "viewports", "noice", "poggers",
+    "overfitted", "overfit", "Mikro", "VMID", "compressvlans",
+    "intrs", "pcidump", "mvnw", "journalctl",
+    "squibble", "dnschecker", "Hostable",
+    "lora", "elem", "newgreen", "nomodified", "endfunction",
+    "PROSAFE", "wifi", "Wifi", "homelabs", "conn",
+    "homegrown", "halflife", "underlayer", "comminution",
+    "Gibrat's", "Parra", "Cuva", "Kooks", "Erick", "Elley",
+    "Duhé", "Shalalala", "Onka's", "Moka", "Stumblin",
+    "feelslikeimfallinginlove",
+    "neighborhood", "Signaled", "judgment", "centered", "timezone", "anymore",
+    "honky", "tonk", "colors"
+  ],
+  "flagWords": [
+    "experiement", "knoweldge", "mechinism", "catelogued",
+    "experiementing", "aquisition", "everyond", "beverety", "kindof",
+    "Todayy", "Homelan"
+  ]
+}

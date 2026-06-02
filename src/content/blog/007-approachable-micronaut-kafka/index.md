@@ -18,7 +18,7 @@ Therefore I have set about writing my very own, back to basics tutorial, that wi
 ## Tutorial - Sending Messages with Kafka
 
 ### Overview
-In this tutorial, you will learn how to create an application, using the micronaut framework that will send messages to a Kafka topic. To be successful with this tutorial, you will need to have set up micronauts, have a working kafka installation and have some knoweldge of Java (but an advanced knowledge would make this tutorial more accessible and valuable.) 
+In this tutorial, you will learn how to create an application, using the micronaut framework that will send messages to a Kafka topic. To be successful with this tutorial, you will need to have set up micronauts, have a working kafka installation and have some knowledge of Java (but an advanced knowledge would make this tutorial more accessible and valuable.) 
 
 
 
