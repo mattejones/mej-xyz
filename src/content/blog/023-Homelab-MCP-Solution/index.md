@@ -45,10 +45,10 @@ Happy path Sequence diagram:
 
 
 
-Some improvements I have in mind, which honestly all keep circling back to the same gap - nothing persists between sessions:
+Some improvements I have in mind, which honestly all keep circling back to the same gap of being able to recycle tasks: 
 
 - Task and Session Management - being able to identify the beginning of a new task/session so I can review these, and potentially automatically generate scripts/Terraform solutions to those processes.
 - Better UI elements - maybe a builtin command-line editor so that when the HIL is seeing a possible improvement, being able to edit the command, rather than reject it, or give feedback back to the caller to help it get the correct command.
 - Better connection establishment - Help the LLM understand WHAT it has connected to at the beginning, such as OS type, permissions, etc.
 
-You're welcome to take a look at what it is, maybe build your own ideas on top, or give me a PR on something that could be mega! I'd love to see your suggestions!
+You're welcome to take a look at what it is, maybe build your own ideas on top, or give me a PR on something that could be mega! I'd love to see your suggestions! Repo is at: [https://github.com/mattejones/vigil-scc] 
