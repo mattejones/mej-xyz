@@ -18,6 +18,8 @@ type Props = CollectionEntry<"blog">;
 
 const post = Astro.props;
 const { Content } = await post.render();
+const postTitle = post.data.title;
+const postSlug = post.slug;
 ---
 
 <PageLayout title={post.data.title} description={post.data.description}>
@@ -47,3 +49,31 @@ const { Content } = await post.render();
     </div>
   </div>
 </PageLayout>
+
+<script is:inline define:vars={{ postTitle, postSlug }}>
+  function setupReadTracking() {
+    var article = document.querySelector('article');
+    if (!article) return;
+
+    var fired = false;
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting && !fired) {
+          fired = true;
+          window.posthog?.capture('blog_post_read', {
+            post_title: postTitle,
+            post_slug: postSlug
+          });
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 1.0 });
+
+    // Observe the last child of the article to detect scroll completion
+    var lastChild = article.lastElementChild || article;
+    observer.observe(lastChild);
+  }
+
+  document.addEventListener('DOMContentLoaded', setupReadTracking);
+  document.addEventListener('astro:page-load', setupReadTracking);
+</script>

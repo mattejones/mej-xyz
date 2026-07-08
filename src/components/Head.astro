@@ -138,10 +138,12 @@ const { title, description, image = "/nano.png" } = Astro.props;
           document.documentElement.removeAttribute("data-color");
           localStorage.setItem("color", "on");
           setPageAccent();
+          window.posthog?.capture("color_mode_toggled", { new_state: "on" });
         } else {
           document.documentElement.style.removeProperty("--accent");
           document.documentElement.setAttribute("data-color", "off");
           localStorage.setItem("color", "off");
+          window.posthog?.capture("color_mode_toggled", { new_state: "off" });
           // Exclusive: signal other modes to deactivate
           document.dispatchEvent(new CustomEvent("mej:mode-activate", { detail: { mode: "colour-off" } }));
         }
