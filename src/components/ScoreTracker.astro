@@ -12,6 +12,7 @@
     level:         number;
     unlockedModes: string[];
     activeMode:    string | null;
+    snakePts:      number; // points earned in snake games, written by Snake.astro
   }
 
   // ── Constants ──────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@
       visits: [], scrollPx: 0, cursorPx: 0,
       score: 0, level: 0,
       unlockedModes: [], activeMode: null,
+      snakePts: 0,
     };
   }
 
@@ -58,7 +60,8 @@
     return (
       s.visits.length * VISIT_PTS +
       Math.floor(Math.sqrt(s.scrollPx) * SCROLL_FACTOR) +
-      Math.min(Math.floor(Math.sqrt(s.cursorPx) * CURSOR_FACTOR), CURSOR_CAP)
+      Math.min(Math.floor(Math.sqrt(s.cursorPx) * CURSOR_FACTOR), CURSOR_CAP) +
+      (s.snakePts ?? 0)
     );
   }
 
@@ -134,6 +137,14 @@
       state.cursorPx += Math.round(cursorAcc);
       scrollAcc = 0;
       cursorAcc = 0;
+      // Re-read snakePts: Snake.astro may have updated it after we loaded state
+      try {
+        const fresh = localStorage.getItem(STORAGE_KEY);
+        if (fresh) {
+          const parsed = JSON.parse(fresh);
+          if (typeof parsed.snakePts === "number") state.snakePts = parsed.snakePts;
+        }
+      } catch {}
       state.score = computeScore(state);
       state.level = computeLevel(state.score);
       saveState(state);

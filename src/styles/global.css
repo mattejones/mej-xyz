@@ -285,3 +285,266 @@ html #back-to-top {
 html.scrolled #back-to-top {
   @apply opacity-100 pointer-events-auto;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   90s UNLOCKABLE EXPERIENCE — infrastructure styles
+   (The visual/page-transformation CSS lives in Nineties.astro's
+   NINETIES_CSS string and is injected into <head> only when active.)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Toggle button locked state — always needed since button is in the DOM */
+#nineties-toggle-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Unlock banner — fixed position, neo-brutalist style, always available */
+#nineties-unlock-banner {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+  color: var(--text);
+  padding: 14px 20px;
+  text-align: center;
+  max-width: 90vw;
+  min-width: 260px;
+  font-family: theme("fontFamily.sans");
+}
+#nineties-unlock-banner .nineties-unlock-title {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+#nineties-unlock-banner .nineties-unlock-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Safety: hide card lists that were replaced by 90s tables */
+.nineties-hidden {
+  display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SNAKE MINI-GAME
+   Fixed-position modal overlay. Canvas is a self-contained game board;
+   no relationship to page content. Available on every page.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Play button locked state */
+#snake-play-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Unlock banner */
+#snake-unlock-banner {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 var(--border);
+  color: var(--text);
+  padding: 14px 20px;
+  text-align: center;
+  max-width: 90vw;
+  min-width: 260px;
+  font-family: theme("fontFamily.sans");
+}
+#snake-unlock-banner .snake-unlock-title {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+#snake-unlock-banner .snake-unlock-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Modal overlay + window */
+#snake-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+#snake-modal-box {
+  background-color: var(--bg);
+  border: 2px solid var(--border);
+  box-shadow: 6px 6px 0 var(--border);
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+}
+
+#snake-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  background-color: var(--accent);
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: background-color 0.3s ease;
+}
+
+.snake-modal-title {
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.05em;
+}
+
+#snake-modal-close {
+  background: none;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background-color 0.1s;
+}
+#snake-modal-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+#snake-modal-canvas-wrap {
+  position: relative;  /* anchor for #snake-end overlay */
+  line-height: 0;      /* eliminate gap below inline canvas */
+  flex-shrink: 0;
+}
+
+/* Game status + D-pad bar */
+#snake-ui {
+  padding: 8px 12px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border-top: 2px solid var(--border);
+  background-color: var(--card-bg);
+}
+
+#snake-status {
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.45rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  line-height: 1.9;
+  opacity: 0.8;
+}
+
+/* D-pad */
+#snake-dpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.snake-dpad-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.snake-dpad-center {
+  width: 36px;
+  height: 36px;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  opacity: 0.3;
+}
+.snake-dpad-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  background-color: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0 var(--border);
+  user-select: none;
+  -webkit-user-select: none;
+  transition: box-shadow 0.06s, transform 0.06s;
+}
+.snake-dpad-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* End screen overlay — covers the canvas inside #snake-modal-canvas-wrap */
+#snake-end {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg);
+  opacity: 0.96;
+  z-index: 10;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 1rem;
+}
+.snake-end-title {
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+.snake-end-score {
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.45rem;
+  color: var(--text-muted);
+}
+.snake-end-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+.snake-end-btn {
+  background-color: var(--accent);
+  color: #ffffff;
+  border: 2px solid var(--border);
+  box-shadow: 3px 3px 0 var(--border);
+  padding: 6px 14px;
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.4rem;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: box-shadow 0.06s, transform 0.06s;
+}
+.snake-end-btn:hover {
+  box-shadow: 1px 1px 0 var(--border);
+  transform: translate(2px, 2px);
+}
+.snake-end-close {
+  background-color: var(--card-bg);
+  color: var(--text);
+}

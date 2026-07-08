@@ -1,0 +1,627 @@
+---
+// Nineties.astro — 90s unlockable experience overlay
+//
+// Architecture:
+//   • Own storage key (mej_90s_v1) — never touches ScoreTracker's key.
+//     ScoreTracker's flush() can never wipe the unlocked/active flags.
+//   • All visual CSS lives in NINETIES_CSS, injected as <style id="nineties-injected-styles">
+//     appended to <head> when active, removed on deactivate.
+//     Being the LAST stylesheet it wins every specificity fight cleanly.
+//   • Marquee injected as first child of <main> (afterbegin), not before it —
+//     lives in normal flow below the fixed header; no z-index conflicts.
+---
+
+<script>
+  // ── Keys & thresholds ─────────────────────────────────────────────────
+  const NINETIES_KEY  = "mej_90s_v1";   // our own key — ScoreTracker never touches this
+  const SCORE_KEY     = "mej_score_v1"; // read-only reference to the score
+  const UNLOCK_SCORE  = 175;            // Level 3
+
+  // ── Injected CSS — comes last in cascade, overrides everything ────────
+
+  const NINETIES_CSS = `
+/* ── Body: flying-toasters tile ───────────────────────────────────────── */
+body {
+  background-image: url('/90s/background.png') !important;
+  background-repeat: repeat !important;
+  background-color: #000000 !important;
+  transition: none !important;
+}
+
+/* Low-bandwidth / no-background variant (?nobg=1) */
+html[data-nobg] body {
+  background-image: none !important;
+  background-color: #c0c0c0 !important;
+}
+
+/* ── Header: classic navy ──────────────────────────────────────────────── */
+body > header {
+  background-color: #000080 !important;
+  border-bottom: 3px solid #ffff00 !important;
+  transition: none !important;
+}
+body > header * {
+  color: #ffff00 !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  transition: none !important;
+}
+body > header a:hover,
+body > header button:hover {
+  color: #ffffff !important;
+  text-decoration: underline !important;
+}
+
+/* ── Content containers: Windows 95 grey ──────────────────────────────── */
+/* Only max-w-4xl divs inside main get the grey pane.
+   main itself stays transparent so tile shows in gutters. */
+main .max-w-4xl {
+  background-color: #c0c0c0 !important;
+}
+
+/* Article (prose content): white paper with inset border */
+main article {
+  background-color: #ffffff !important;
+  border: 2px inset #808080 !important;
+  padding: 1.25rem !important;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────── */
+footer {
+  background-color: #c0c0c0 !important;
+  border-top: 3px ridge #ffffff !important;
+  transition: none !important;
+}
+footer * {
+  font-family: 'Times New Roman', Times, serif !important;
+}
+
+/* ── Typography ────────────────────────────────────────────────────────── */
+main * {
+  font-family: 'Times New Roman', Times, serif !important;
+}
+main h1,
+main h2,
+main h3,
+main h4 {
+  font-family: Arial, Helvetica, sans-serif !important;
+  text-align: center !important;
+  color: #000080 !important;
+}
+
+/* ── Classic 90s link colours ──────────────────────────────────────────── */
+main a {
+  color: #0000ee !important;
+  text-decoration: underline !important;
+}
+main a:visited {
+  color: #551a8b !important;
+}
+main a:hover,
+main a:active {
+  color: #ff0000 !important;
+}
+/* Arrow cards and CTA cards — keep dark text on Win95 grey/white */
+main a.nb-arrow-card,
+main a.nb-card,
+main a.nb-card-accent {
+  color: #000000 !important;
+  text-decoration: none !important;
+}
+main a.nb-arrow-card:hover,
+main a.nb-card:hover,
+main a.nb-card-accent:hover {
+  color: #000000 !important;
+}
+
+/* ── Cards: Windows 95 raised style ───────────────────────────────────── */
+.nb-card,
+.nb-card-accent {
+  background-color: #d4d0c8 !important;
+  color: #000000 !important;
+  border: 2px outset #ffffff !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+.nb-card:hover,
+.nb-card-accent:hover {
+  background-color: #d4d0c8 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Pressed toggle (colour/90s buttons) — Windows 95 depressed look */
+.nb-toggle-pressed {
+  transform: none !important;
+  border: 2px inset #808080 !important;
+  box-shadow: none !important;
+  background-color: #c0c0c0 !important;
+  color: #000000 !important;
+}
+
+/* ── Suppress modern effects ───────────────────────────────────────────── */
+.hero-grid::before,
+.hero-grid::after { display: none !important; }
+.card-bg          { display: none !important; }
+
+/* Disable entry animations so content appears immediately */
+.animate          { opacity: 1 !important; transform: none !important; transition: none !important; }
+.animate.show     { opacity: 1 !important; transform: none !important; }
+
+/* ── Blink ─────────────────────────────────────────────────────────────── */
+@keyframes nineties-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.blink { animation: nineties-blink 1s step-end infinite; }
+
+/* ── Marquee strip (first child of <main>) ─────────────────────────────── */
+#nineties-marquee {
+  background-color: #000080;
+  color: #ffff00;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 4px 0;
+  border-bottom: 2px solid #ffff00;
+}
+
+/* ── Footer strip ──────────────────────────────────────────────────────── */
+#nineties-footer {
+  text-align: center;
+  background: #c0c0c0;
+  border-top: 3px ridge #ffffff;
+  border-bottom: 3px groove #808080;
+  padding: 20px 16px;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12px;
+  color: #000000;
+}
+.nineties-constbig { margin-bottom: 16px; }
+.nineties-constbig img { max-width: 100%; height: auto; }
+.nineties-badges {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.nineties-badges img { display: block; border: 1px solid #808080; }
+.nineties-counter-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.nineties-typloop   { height: 70px; width: auto; }
+.nineties-dancing   { height: 80px; width: auto; }
+.nineties-counter-text {
+  font-family: 'Times New Roman', Times, serif;
+  font-weight: bold;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #000080;
+}
+.nineties-disclaimer {
+  font-size: 11px;
+  color: #000080;
+  line-height: 2.2;
+  font-family: 'Times New Roman', Times, serif;
+}
+.nineties-lowbw {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0000ee !important;
+  text-decoration: underline !important;
+  font-size: 11px;
+}
+.nineties-lowbw img    { height: 22px; width: auto; vertical-align: middle; }
+.nineties-lowbw:hover  { color: #ff0000 !important; }
+
+/* ── In-content injections ─────────────────────────────────────────────── */
+.nineties-hr {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 10px auto;
+}
+.nineties-new {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  height: 22px;
+  width: auto;
+  z-index: 10;
+  pointer-events: none;
+}
+.nineties-mailbox {
+  height: 20px;
+  width: auto;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* ── 90s table (replaces ArrowCard lists) ──────────────────────────────── */
+.nineties-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 14px;
+  border: 3px outset #d4d0c8;
+  background-color: #c0c0c0;
+}
+.nineties-table tr:nth-child(odd) td  { background-color: #ffffff; }
+.nineties-table tr:nth-child(even) td { background-color: #ececec; }
+.nineties-table tr:hover td {
+  background-color: #000080;
+  color: #ffffff;
+}
+.nineties-table tr:hover td a {
+  color: #ffffff !important;
+  text-decoration: none !important;
+}
+.nineties-table td {
+  border: 1px inset #c0c0c0;
+  padding: 4px 8px;
+  vertical-align: top;
+}
+.nineties-table-date {
+  color: #444444;
+  white-space: nowrap;
+  font-size: 11px;
+  width: 76px;
+}
+.nineties-table-title a {
+  color: #0000cc;
+  text-decoration: underline;
+  font-weight: bold;
+}
+.nineties-table-title a:visited { color: #800080; }
+.nineties-table-desc {
+  color: #333333;
+  font-size: 12px;
+}
+`;
+
+  // ── Types ─────────────────────────────────────────────────────────────
+
+  interface NinetiesState {
+    unlocked: boolean;
+    active:   boolean;
+  }
+
+  // ── State helpers (own key only) ───────────────────────────────────────
+
+  function defaultState(): NinetiesState {
+    return { unlocked: false, active: false };
+  }
+
+  function loadState(): NinetiesState {
+    try {
+      const raw = localStorage.getItem(NINETIES_KEY);
+      if (!raw) return defaultState();
+      return { ...defaultState(), ...JSON.parse(raw) };
+    } catch {
+      return defaultState();
+    }
+  }
+
+  function saveState(s: NinetiesState) {
+    try { localStorage.setItem(NINETIES_KEY, JSON.stringify(s)); } catch {}
+  }
+
+  /** Read the score from ScoreTracker's key — never write to it. */
+  function getScore(): number {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      if (!raw) return 0;
+      return JSON.parse(raw).score ?? 0;
+    } catch { return 0; }
+  }
+
+  // ── Toggle button ──────────────────────────────────────────────────────
+
+  function updateToggleButton(state: NinetiesState) {
+    const btn = document.getElementById("nineties-toggle-btn") as HTMLButtonElement | null;
+    if (!btn) return;
+
+    if (!state.unlocked) {
+      btn.disabled    = true;
+      btn.textContent = "90s: 🔒";
+      btn.title       = `Unlocks at ${UNLOCK_SCORE} points`;
+      btn.classList.remove("nb-toggle-pressed");
+      return;
+    }
+
+    btn.disabled    = false;
+    btn.title       = state.active ? "Disable 90s mode" : "Enable 90s mode";
+    btn.textContent = state.active ? "90s: on" : "90s: off";
+    state.active
+      ? btn.classList.add("nb-toggle-pressed")
+      : btn.classList.remove("nb-toggle-pressed");
+  }
+
+  function wireToggleButton() {
+    const btn = document.getElementById("nineties-toggle-btn");
+    if (!btn || btn.dataset.ninetiesWired) return;
+    btn.dataset.ninetiesWired = "1";
+
+    btn.addEventListener("click", () => {
+      const state  = loadState();
+      state.active = !state.active;
+      saveState(state);
+      if (state.active) {
+        // Exclusive: signal all other modes to deactivate
+        document.dispatchEvent(new CustomEvent("mej:mode-activate", { detail: { mode: "90s" } }));
+        applyNinetiesMode();
+      } else {
+        removeNinetiesMode();
+      }
+      updateToggleButton(loadState());
+    });
+  }
+
+  // ── Style injection ────────────────────────────────────────────────────
+
+  function applyStyleTag() {
+    let style = document.getElementById("nineties-injected-styles") as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "nineties-injected-styles";
+      document.head.appendChild(style);
+    }
+    style.textContent = NINETIES_CSS;
+  }
+
+  // ── DOM injections ─────────────────────────────────────────────────────
+
+  function injectMarquee() {
+    if (document.getElementById("nineties-marquee")) return;
+    const visitorNum = String(Math.max(1337, getScore() * 7 + 1337)).padStart(6, "0");
+    const el         = document.createElement("div");
+    el.id            = "nineties-marquee";
+    el.innerHTML =
+      `<marquee scrollamount="3">` +
+      `★ WELCOME TO MEJ.XYZ ★ LAST UPDATED: TODAY ★ ` +
+      `YOU ARE VISITOR NUMBER ${visitorNum} ★ ` +
+      `BEST VIEWED IN NETSCAPE NAVIGATOR 4.0 AT 800×600 IN 16-BIT COLOUR ★ ` +
+      `POWERED BY JOLT COLA ★ UNDER CONSTRUCTION — CHECK BACK SOON ★` +
+      `</marquee>`;
+    // Insert INSIDE <main> as first child — in normal flow, no z-index conflict
+    const main = document.querySelector("main");
+    if (main) main.insertAdjacentElement("afterbegin", el);
+  }
+
+  function injectFooterStrip() {
+    if (document.getElementById("nineties-footer")) return;
+    const visitorNum = String(Math.max(1337, getScore() * 7 + 1337)).padStart(6, "0");
+    const nobgHref   = window.location.pathname + "?nobg=1";
+
+    const el = document.createElement("div");
+    el.id    = "nineties-footer";
+    el.innerHTML = `
+      <div class="nineties-constbig">
+        <img src="/90s/constbig.gif" alt="Under Construction">
+      </div>
+
+      <div class="nineties-badges">
+        <img src="/90s/best-viewed-eyes.gif" alt="Best viewed with EYES"  title="Best Viewed With EYES">
+        <img src="/90s/commnow.gif"           alt="Netscape NOW!"          title="Netscape NOW!">
+        <img src="/90s/ie_anim.gif"           alt="Internet Explorer"      title="Get Internet Explorer">
+        <img src="/90s/jolt.gif"              alt="Powered by Jolt Cola"   title="This site powered by Jolt Cola">
+        <img src="/90s/linux-tux.gif"         alt="Linux"                  title="Linux Inside">
+        <img src="/90s/constru2.gif"          alt="Under Construction"     title="Under Construction">
+      </div>
+
+      <div class="nineties-counter-row">
+        <img src="/90s/typloop.gif"     alt="Typing computer"  class="nineties-typloop">
+        <div class="nineties-counter-text">
+          <img src="/90s/vcounter.gif"  alt="visitor counter">
+          <br>YOU ARE VISITOR #${visitorNum}
+        </div>
+        <img src="/90s/dancing-aim.gif" alt="Dancing AIM guy"  class="nineties-dancing">
+      </div>
+
+      <div class="nineties-disclaimer">
+        <span class="blink">★</span>
+        THIS PAGE IS BEST VIEWED IN NETSCAPE NAVIGATOR 4.0 AT 800×600 RESOLUTION IN 16-BIT COLOUR
+        <span class="blink">★</span>
+        <br><br>
+        <a href="${nobgHref}" class="nineties-lowbw">
+          <img src="/90s/modem.gif" alt="56K Modem">
+          [ click here for low-bandwidth / no-background version ]
+        </a>
+      </div>
+    `;
+
+    const footer = document.querySelector("footer");
+    if (footer) footer.insertAdjacentElement("afterend", el);
+  }
+
+  function replaceHRs() {
+    document.querySelectorAll("main hr").forEach(hr => {
+      const img     = document.createElement("img");
+      img.src       = "/90s/hr-gif-car-line.gif";
+      img.alt       = "────────────────────────";
+      img.className = "nineties-hr";
+      hr.replaceWith(img);
+    });
+  }
+
+  function injectNewBadges() {
+    const now        = Date.now();
+    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+    document.querySelectorAll<HTMLElement>("[data-pubdate]").forEach(el => {
+      const d = el.getAttribute("data-pubdate");
+      if (!d || el.querySelector(".nineties-new")) return;
+      if (now - new Date(d).getTime() < ninetyDays) {
+        const badge     = document.createElement("img");
+        badge.src       = "/90s/newgreen.gif";
+        badge.alt       = "NEW!";
+        badge.className = "nineties-new";
+        el.appendChild(badge);
+      }
+    });
+  }
+
+  function injectMailboxes() {
+    document.querySelectorAll<HTMLAnchorElement>('a[href^="mailto:"]').forEach(link => {
+      if (link.querySelector(".nineties-mailbox")) return;
+      const img     = document.createElement("img");
+      img.src       = "/90s/mailbox.gif";
+      img.alt       = "";
+      img.className = "nineties-mailbox";
+      link.prepend(img);
+    });
+  }
+
+  function injectCardTables() {
+    const now        = Date.now();
+    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+
+    document.querySelectorAll<HTMLElement>("ul").forEach(ul => {
+      // Only target lists that actually contain ArrowCards
+      const cards = Array.from(ul.querySelectorAll<HTMLAnchorElement>(":scope > li > .nb-arrow-card"));
+      if (cards.length === 0 || ul.classList.contains("nineties-hidden")) return;
+
+      const table = document.createElement("table");
+      table.className = "nineties-table";
+      const tbody = document.createElement("tbody");
+
+      cards.forEach(card => {
+        const href    = card.getAttribute("href") ?? "#";
+        const title   = card.querySelector(".card-title")?.textContent?.trim() ?? "";
+        const desc    = card.querySelector(".card-desc-inner")?.textContent?.trim() ?? "";
+        const pubdate = card.getAttribute("data-pubdate") ?? "";
+        const isNew   = pubdate && (now - new Date(pubdate).getTime() < ninetyDays);
+        const dateStr = pubdate
+          ? new Date(pubdate).toLocaleDateString("en-GB", { year: "numeric", month: "short" })
+          : "";
+
+        const tr      = document.createElement("tr");
+        const tdDate  = document.createElement("td");
+        const tdTitle = document.createElement("td");
+        const tdDesc  = document.createElement("td");
+
+        tdDate.className   = "nineties-table-date";
+        tdDate.textContent = dateStr;
+
+        tdTitle.className  = "nineties-table-title";
+        const a = document.createElement("a");
+        a.href        = href;
+        a.textContent = title;
+        tdTitle.appendChild(a);
+        if (isNew) {
+          const newImg = document.createElement("img");
+          newImg.src   = "/90s/newgreen.gif";
+          newImg.alt   = "NEW!";
+          Object.assign(newImg.style, { height: "14px", verticalAlign: "middle", marginLeft: "4px" });
+          tdTitle.appendChild(newImg);
+        }
+
+        tdDesc.className   = "nineties-table-desc";
+        tdDesc.textContent = desc;
+
+        tr.appendChild(tdDate);
+        tr.appendChild(tdTitle);
+        tr.appendChild(tdDesc);
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      ul.classList.add("nineties-hidden");
+      ul.insertAdjacentElement("afterend", table);
+    });
+  }
+
+  // ── Apply / remove ─────────────────────────────────────────────────────
+
+  function applyNinetiesMode() {
+    applyStyleTag();
+
+    // nobg param: strip tile, show flat grey
+    if (new URLSearchParams(window.location.search).get("nobg") === "1") {
+      document.documentElement.setAttribute("data-nobg", "");
+    } else {
+      document.documentElement.removeAttribute("data-nobg");
+    }
+
+    injectMarquee();
+    injectFooterStrip();
+    replaceHRs();
+    injectNewBadges();
+    injectMailboxes();
+    injectCardTables();
+  }
+
+  function removeNinetiesMode() {
+    document.getElementById("nineties-injected-styles")?.remove();
+    document.documentElement.removeAttribute("data-nobg");
+
+    document.getElementById("nineties-marquee")?.remove();
+    document.getElementById("nineties-footer")?.remove();
+    document.querySelectorAll(".nineties-mailbox").forEach(el => el.remove());
+    document.querySelectorAll(".nineties-new").forEach(el => el.remove());
+
+    // Restore card lists; remove injected tables
+    document.querySelectorAll(".nineties-table").forEach(el => el.remove());
+    document.querySelectorAll("ul.nineties-hidden").forEach(ul => ul.classList.remove("nineties-hidden"));
+  }
+
+  // ── Unlock banner ──────────────────────────────────────────────────────
+
+  function showUnlockBanner() {
+    if (document.getElementById("nineties-unlock-banner")) return;
+    const banner = document.createElement("div");
+    banner.id    = "nineties-unlock-banner";
+    banner.innerHTML = `
+      <div class="nineties-unlock-title">🏆 Achievement Unlocked: The 90s Experience</div>
+      <div class="nineties-unlock-sub">The 90s toggle is now available in the footer</div>
+    `;
+    document.body.insertAdjacentElement("afterbegin", banner);
+    setTimeout(() => banner.remove(), 5000);
+  }
+
+  // ── Entry point ────────────────────────────────────────────────────────
+
+  function initNineties() {
+    const score = getScore();
+    const state = loadState();
+
+    // First-time unlock: score threshold crossed
+    // Write ONLY to our own key — never touch ScoreTracker's key
+    if (score >= UNLOCK_SCORE && !state.unlocked) {
+      state.unlocked = true;
+      saveState(state);
+      showUnlockBanner();
+    }
+
+    updateToggleButton(loadState()); // re-read in case we just mutated
+    wireToggleButton();
+
+    if (loadState().active) {
+      applyNinetiesMode();
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", initNineties);
+  document.addEventListener("astro:after-swap",  initNineties);
+
+  // Mutual exclusivity: deactivate 90s if another mode activates
+  document.addEventListener("mej:mode-activate", (e: Event) => {
+    const detail = (e as CustomEvent<{ mode: string }>).detail;
+    if (detail?.mode !== "90s") {
+      const state = loadState();
+      if (state.active) {
+        state.active = false;
+        saveState(state);
+        removeNinetiesMode();
+        updateToggleButton(loadState());
+      }
+    }
+  });
+</script>

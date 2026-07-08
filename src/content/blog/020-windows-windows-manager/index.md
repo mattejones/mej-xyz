@@ -6,7 +6,7 @@ tags: ["tech", "windows", "productivity"]
 
 ---
 
-I'm experiementing with [komorebi](https://github.com/LGUG2Z/komorebi). It's a tiling window manager that makes it easier to work with larger screen real-estates. 
+I'm experimenting with [komorebi](https://github.com/LGUG2Z/komorebi). It's a tiling window manager that makes it easier to work with larger screen real-estates. 
 
 I've been using a tiling window manager for many years, but never on my Windows laptop. A tiling window manager allows you to have a pretty, defined layout where all your application windows are allowed to be. Windows 11 has some basic options, but being able to customise and implement keyboard shortcuts to move windows around automatically helps drive a productive experience. 
 
@@ -34,7 +34,7 @@ I've set up a 60% main panel window - this is where I keep the app I am actively
 
 ### Info screen
 
-My info screen is layed out in one column of applications in rows. On the bottom, I keep my terminal with tabs, which is comfortable, around the middle is "active" area of whatever I might be working on, and apps that find themselves up the top are normally not in use. I tend to keep a notepad open so I can dump and quickly edit text. 
+My info screen is laid out in one column of applications in rows. On the bottom, I keep my terminal with tabs, which is comfortable, around the middle is "active" area of whatever I might be working on, and apps that find themselves up the top are normally not in use. I tend to keep a notepad open so I can dump and quickly edit text. 
 
 ```
 ┌──────────────────┐
@@ -54,7 +54,7 @@ My info screen is layed out in one column of applications in rows. On the bottom
 
 ## Configuration
 
-You need to set up this tool with JSON. There is no GUI editor. When you get the application, you also need to pull an applications.json which describes a lot of comon applications and provides important information to the window manager about these apps. 
+You need to set up this tool with JSON. There is no GUI editor. When you get the application, you also need to pull an applications.json which describes a lot of common applications and provides important information to the window manager about these apps. 
 
 The basic premise of the main configuration file is all outlined in [komorebi configuration](https://lgug2z.github.io/komorebi/example-configurations.html).
 
@@ -81,4 +81,4 @@ Having a neat and tidy work surface means that you know where every tool is, and
 
 having a very quick way to land at an ergonomic workspace with sane layouts means less dead-space. At the time of writing, I can see my todo list, email, git client, cmd line, editor and site preview. This can rapidly be switched over as I move onto different tasks. 
 
-I'm still experimenting with the tool, and seeing if I can get good value out of it, but over the last 48 hours, it's been pretty good and I would recommend everyond gives it a go! (One more thing to get my Windows laptop feeling a bit more like Linux.)
+I'm still experimenting with the tool, and seeing if I can get good value out of it, but over the last 48 hours, it's been pretty good and I would recommend everyone gives it a go! (One more thing to get my Windows laptop feeling a bit more like Linux.)

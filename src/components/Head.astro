@@ -144,6 +144,8 @@ const { title, description, image = "/nano.png" } = Astro.props;
           document.documentElement.setAttribute("data-color", "off");
           localStorage.setItem("color", "off");
           window.posthog?.capture("color_mode_toggled", { new_state: "off" });
+          // Exclusive: signal other modes to deactivate
+          document.dispatchEvent(new CustomEvent("mej:mode-activate", { detail: { mode: "colour-off" } }));
         }
         updateColorToggleState();
       });
@@ -169,6 +171,18 @@ const { title, description, image = "/nano.png" } = Astro.props;
 
   document.addEventListener("DOMContentLoaded", function() { init(); });
   document.addEventListener("astro:after-swap", function() { init(); });
+
+  // Mutual exclusivity: if snake or 90s activates, restore colour mode if it was off
+  document.addEventListener("mej:mode-activate", function(e) {
+    if (e.detail && e.detail.mode !== "colour-off") {
+      if (document.documentElement.getAttribute("data-color") === "off") {
+        document.documentElement.removeAttribute("data-color");
+        localStorage.setItem("color", "on");
+        setPageAccent();
+        updateColorToggleState();
+      }
+    }
+  });
 
   // Run immediately before paint to avoid flash
   preloadColor();

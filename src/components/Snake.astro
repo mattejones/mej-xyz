@@ -1,0 +1,475 @@
+---
+// Snake.astro — Pop-up Snake mini-game, available site-wide
+//
+// Opens as a fixed modal overlay. Pure canvas game — no relationship to
+// any page content. The modal is a neo-brutalist card with a title bar,
+// canvas game board, status strip, and D-pad for touch.
+//
+// Unlocks at UNLOCK_SCORE (100 pts). Toggle via #snake-play-btn in Footer.
+// Own storage key: mej_snake_v1 { unlocked, active }
+// Score integration: writes directly to mej_score_v1.snakePts
+// Mutual exclusivity: dispatches / listens for mej:mode-activate custom event
+---
+
+<script>
+  const SNAKE_KEY    = "mej_snake_v1";
+  const SCORE_KEY    = "mej_score_v1";
+  const UNLOCK_SCORE = 300;
+  const FOOD_PTS     = 5;
+  const TICK_MS      = 155; // ms per game step (~6.5 moves/sec)
+
+  // Score constants — must mirror ScoreTracker.astro exactly
+  const VISIT_PTS     = 10;
+  const SCROLL_FACTOR = 0.5;
+  const CURSOR_FACTOR = 0.08;
+  const CURSOR_CAP    = 40;
+
+  // ── Types ─────────────────────────────────────────────────────────────
+  interface SnakeState { unlocked: boolean; active: boolean; }
+  type Pos = { row: number; col: number };
+
+  // ── Storage helpers ───────────────────────────────────────────────────
+  function loadState(): SnakeState {
+    try {
+      const raw = localStorage.getItem(SNAKE_KEY);
+      if (!raw) return { unlocked: false, active: false };
+      return { unlocked: false, active: false, ...JSON.parse(raw) };
+    } catch { return { unlocked: false, active: false }; }
+  }
+  function saveState(s: SnakeState) {
+    try { localStorage.setItem(SNAKE_KEY, JSON.stringify(s)); } catch {}
+  }
+  function getScore(): number {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      return raw ? (JSON.parse(raw).score ?? 0) : 0;
+    } catch { return 0; }
+  }
+  function addSnakePoints(pts: number) {
+    try {
+      const raw = localStorage.getItem(SCORE_KEY);
+      const s = raw ? JSON.parse(raw) : {};
+      s.snakePts = (s.snakePts ?? 0) + pts;
+      s.score =
+        (s.visits?.length ?? 0) * VISIT_PTS +
+        Math.floor(Math.sqrt(s.scrollPx  ?? 0) * SCROLL_FACTOR) +
+        Math.min(Math.floor(Math.sqrt(s.cursorPx ?? 0) * CURSOR_FACTOR), CURSOR_CAP) +
+        s.snakePts;
+      localStorage.setItem(SCORE_KEY, JSON.stringify(s));
+      const el = document.getElementById("score-display");
+      if (el) el.textContent = "SCORE: " + s.score;
+    } catch {}
+  }
+
+  // ── CSS helpers ───────────────────────────────────────────────────────
+  function cssVar(name: string): string {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function hexAlpha(hex: string, alpha: number): string {
+    const h = hex.replace(/^#/, "");
+    let r: number, g: number, b: number;
+    if (h.length === 3) {
+      r = parseInt(h[0] + h[0], 16);
+      g = parseInt(h[1] + h[1], 16);
+      b = parseInt(h[2] + h[2], 16);
+    } else {
+      r = parseInt(h.slice(0, 2), 16);
+      g = parseInt(h.slice(2, 4), 16);
+      b = parseInt(h.slice(4, 6), 16);
+    }
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  // ── Canvas / grid ─────────────────────────────────────────────────────
+  let canvas: HTMLCanvasElement | null = null;
+  let ctx: CanvasRenderingContext2D | null = null;
+  let N_COLS = 0;
+  let N_ROWS = 0;
+  let CELL   = 24;
+
+  /**
+   * Compute a square canvas side length that fits comfortably in the viewport.
+   * Leaves ~260 px of vertical headroom for modal chrome (header + status + d-pad).
+   */
+  function computeSize(): number {
+    const maxW = window.innerWidth  - 48;
+    const maxH = window.innerHeight - 260;
+    return Math.max(240, Math.min(520, Math.min(maxW, maxH)));
+  }
+
+  function createModal(): boolean {
+    document.getElementById("snake-modal")?.remove();
+
+    const size = computeSize();
+    CELL   = Math.max(20, Math.min(28, Math.floor(size / 20)));
+    N_COLS = Math.floor(size / CELL);
+    N_ROWS = N_COLS; // square board
+    const cw = N_COLS * CELL;
+    const ch = N_ROWS * CELL;
+
+    const modal = document.createElement("div");
+    modal.id = "snake-modal";
+    modal.innerHTML = `
+      <div id="snake-modal-box">
+        <div id="snake-modal-header">
+          <span class="snake-modal-title">🐍 SNAKE</span>
+          <button id="snake-modal-close" aria-label="Close Snake">✕</button>
+        </div>
+        <div id="snake-modal-canvas-wrap">
+          <canvas id="snake-canvas" width="${cw}" height="${ch}" style="display:block;"></canvas>
+        </div>
+        <div id="snake-ui">
+          <div id="snake-status"></div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById("snake-modal-close")
+      ?.addEventListener("click", closeGame);
+
+    canvas = document.getElementById("snake-canvas") as HTMLCanvasElement;
+    ctx = canvas?.getContext("2d") ?? null;
+    if (!ctx) return false;
+
+    const ui = document.getElementById("snake-ui");
+    if (ui) injectDPad(ui);
+
+    return true;
+  }
+
+  function closeGame() {
+    const s = loadState();
+    s.active = false;
+    saveState(s);
+    deactivateSnake();
+    updatePlayButton(loadState());
+  }
+
+  // ── Game state ────────────────────────────────────────────────────────
+  let snake:     Pos[]         = [];
+  let food:      Pos | null    = null;
+  let dir:       Pos           = { row: 0, col: 1 };
+  let nextDir:   Pos           = { row: 0, col: 1 };
+  let running    = false;
+  let rafId:     number | null = null;
+  let lastTick   = 0;
+  let sessionPts = 0;
+
+  function posEq(a: Pos, b: Pos) { return a.row === b.row && a.col === b.col; }
+
+  function inBounds(p: Pos): boolean {
+    return p.row >= 0 && p.row < N_ROWS && p.col >= 0 && p.col < N_COLS;
+  }
+
+  function placeFood() {
+    const free: Pos[] = [];
+    for (let row = 0; row < N_ROWS; row++) {
+      for (let col = 0; col < N_COLS; col++) {
+        const p = { row, col };
+        if (!snake.some(s => posEq(s, p))) free.push(p);
+      }
+    }
+    food = free.length ? free[Math.floor(Math.random() * free.length)] : null;
+  }
+
+  function tick() {
+    dir = nextDir;
+    const head = snake[0];
+    const next: Pos = { row: head.row + dir.row, col: head.col + dir.col };
+
+    if (!inBounds(next))                 { endGame(false); return; }
+    if (snake.some(p => posEq(p, next))) { endGame(false); return; }
+
+    snake.unshift(next);
+
+    if (food && posEq(next, food)) {
+      sessionPts += FOOD_PTS;
+      addSnakePoints(FOOD_PTS);
+      placeFood();
+      if (!food) { endGame(true); return; } // board full — you win
+    } else {
+      snake.pop();
+    }
+    updateStatusUI();
+  }
+
+  function startRound() {
+    running    = true;
+    sessionPts = 0;
+    // Start roughly in the middle-left, heading right
+    snake   = [{ row: Math.floor(N_ROWS / 2), col: 2 }];
+    dir     = { row: 0, col: 1 };
+    nextDir = { row: 0, col: 1 };
+    placeFood();
+    document.getElementById("snake-end")?.remove();
+    updateStatusUI();
+    lastTick = performance.now();
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(gameLoop);
+  }
+
+  function gameLoop(ts: number) {
+    if (!running) return;
+    if (ts - lastTick >= TICK_MS) {
+      lastTick = ts;
+      tick();
+      if (!running) return; // tick may have ended the game
+    }
+    draw();
+    rafId = requestAnimationFrame(gameLoop);
+  }
+
+  function endGame(won: boolean) {
+    running = false;
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+    draw(); // render final state before end screen appears
+    showEndScreen(won);
+  }
+
+  // ── Canvas drawing ────────────────────────────────────────────────────
+  function draw() {
+    if (!ctx || !canvas) return;
+
+    const bg      = cssVar("--bg")       || "#F9F7F2";
+    const accent  = cssVar("--accent")   || "#3B5BDB";
+    const accent2 = cssVar("--accent-2") || "#FF6B35";
+    const border  = cssVar("--border")   || "#000000";
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // 1. Background
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // 2. Dot grid — mirrors the hero section dot pattern
+    ctx.fillStyle = hexAlpha(accent, 0.15);
+    for (let row = 0; row < N_ROWS; row++) {
+      for (let col = 0; col < N_COLS; col++) {
+        ctx.beginPath();
+        ctx.arc(col * CELL + CELL / 2, row * CELL + CELL / 2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 3. Food — pulsing accent-2 square with neo-brutalist shadow
+    if (food) {
+      const pulse = 0.78 + 0.22 * Math.abs(Math.sin(performance.now() / 280));
+      const fw  = CELL * pulse;
+      const off = (CELL - fw) / 2;
+      const fx  = food.col * CELL + off;
+      const fy  = food.row * CELL + off;
+      ctx.fillStyle = border;
+      ctx.fillRect(fx + 3, fy + 3, fw, fw);
+      ctx.fillStyle = accent2;
+      ctx.fillRect(fx, fy, fw, fw);
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(fx + 1, fy + 1, fw - 2, fw - 2);
+    }
+
+    // 4. Snake body (semi-transparent, inset)
+    ctx.fillStyle = hexAlpha(accent, 0.5);
+    for (let i = 1; i < snake.length; i++) {
+      const s = snake[i];
+      ctx.fillRect(s.col * CELL + 3, s.row * CELL + 3, CELL - 6, CELL - 6);
+    }
+
+    // 5. Snake head (full accent, bordered)
+    if (snake.length > 0) {
+      const h = snake[0];
+      ctx.fillStyle   = accent;
+      ctx.fillRect(h.col * CELL, h.row * CELL, CELL, CELL);
+      ctx.strokeStyle = border;
+      ctx.lineWidth   = 2;
+      ctx.strokeRect(h.col * CELL + 1, h.row * CELL + 1, CELL - 2, CELL - 2);
+    }
+  }
+
+  // ── Status strip ──────────────────────────────────────────────────────
+  function updateStatusUI() {
+    const el = document.getElementById("snake-status");
+    if (el) {
+      el.innerHTML =
+        `PTS +${sessionPts} &nbsp;&nbsp; LEN ${snake.length}<br>` +
+        `&larr; &uarr; &darr; &rarr; &nbsp; WASD &nbsp; ESC`;
+    }
+  }
+
+  // ── End screen ────────────────────────────────────────────────────────
+  function showEndScreen(won: boolean) {
+    const wrap = document.getElementById("snake-modal-canvas-wrap");
+    if (!wrap) return;
+
+    const end = document.createElement("div");
+    end.id = "snake-end";
+    end.innerHTML = `
+      <div class="snake-end-title">${won ? "🐍 YOU WIN!" : "GAME OVER"}</div>
+      <div class="snake-end-score">+${sessionPts} PTS ADDED TO SCORE</div>
+      <div class="snake-end-actions">
+        <button class="snake-end-btn" id="snake-restart-btn">PLAY AGAIN</button>
+        <button class="snake-end-btn snake-end-close" id="snake-close-btn">CLOSE</button>
+      </div>
+    `;
+    wrap.appendChild(end);
+
+    document.getElementById("snake-restart-btn")
+      ?.addEventListener("click", () => { end.remove(); startRound(); });
+    document.getElementById("snake-close-btn")
+      ?.addEventListener("click", closeGame);
+  }
+
+  // ── Controls ──────────────────────────────────────────────────────────
+  const KEY_MAP: Record<string, Pos> = {
+    ArrowUp:    { row: -1, col:  0 }, w: { row: -1, col:  0 },
+    ArrowDown:  { row:  1, col:  0 }, s: { row:  1, col:  0 },
+    ArrowLeft:  { row:  0, col: -1 }, a: { row:  0, col: -1 },
+    ArrowRight: { row:  0, col:  1 }, d: { row:  0, col:  1 },
+  };
+
+  function applyDir(d: Pos) {
+    // Reject 180° reversals to prevent instant self-collision
+    if (d.row !== -dir.row || d.col !== -dir.col) nextDir = d;
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape") { closeGame(); return; }
+    if (!running) return;
+    const d = KEY_MAP[e.key];
+    if (d) { applyDir(d); e.preventDefault(); }
+  }
+
+  function injectDPad(container: HTMLElement) {
+    if (document.getElementById("snake-dpad")) return;
+    const el = document.createElement("div");
+    el.id = "snake-dpad";
+    el.innerHTML = `
+      <button class="snake-dpad-btn" data-dir="up">↑</button>
+      <div class="snake-dpad-row">
+        <button class="snake-dpad-btn" data-dir="left">←</button>
+        <span class="snake-dpad-center"></span>
+        <button class="snake-dpad-btn" data-dir="right">→</button>
+      </div>
+      <button class="snake-dpad-btn" data-dir="down">↓</button>
+    `;
+    const dirMap: Record<string, Pos> = {
+      up: KEY_MAP.ArrowUp, down: KEY_MAP.ArrowDown,
+      left: KEY_MAP.ArrowLeft, right: KEY_MAP.ArrowRight,
+    };
+    el.querySelectorAll<HTMLButtonElement>(".snake-dpad-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const d = dirMap[btn.dataset.dir!];
+        if (d) applyDir(d);
+      });
+    });
+    container.appendChild(el);
+  }
+
+  // ── Play button ───────────────────────────────────────────────────────
+  function updatePlayButton(state: SnakeState) {
+    const btn = document.getElementById("snake-play-btn") as HTMLButtonElement | null;
+    if (!btn) return;
+    if (!state.unlocked) {
+      btn.disabled    = true;
+      btn.textContent = "Play 🔒";
+      btn.title       = `Unlocks at ${UNLOCK_SCORE} points`;
+      btn.classList.remove("nb-toggle-pressed");
+      return;
+    }
+    btn.disabled    = false;
+    btn.title       = state.active ? "Close Snake" : "Play Snake";
+    btn.textContent = state.active ? "Play: on" : "Play";
+    state.active
+      ? btn.classList.add("nb-toggle-pressed")
+      : btn.classList.remove("nb-toggle-pressed");
+  }
+
+  function wirePlayButton() {
+    const btn = document.getElementById("snake-play-btn");
+    if (!btn || btn.dataset.snakeWired) return;
+    btn.dataset.snakeWired = "1";
+    btn.addEventListener("click", () => {
+      const state  = loadState();
+      state.active = !state.active;
+      saveState(state);
+      if (state.active) {
+        // Exclusive: signal all other modes to deactivate
+        document.dispatchEvent(new CustomEvent("mej:mode-activate", { detail: { mode: "snake" } }));
+        activateSnake();
+      } else {
+        deactivateSnake();
+      }
+      updatePlayButton(loadState());
+    });
+  }
+
+  // ── Activate / deactivate ─────────────────────────────────────────────
+  function activateSnake() {
+    if (!createModal()) return;
+    document.addEventListener("keydown", onKeyDown);
+    startRound();
+  }
+
+  function deactivateSnake() {
+    running = false;
+    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+    document.removeEventListener("keydown", onKeyDown);
+    document.getElementById("snake-modal")?.remove();
+    canvas = null;
+    ctx    = null;
+  }
+
+  // ── Unlock banner ─────────────────────────────────────────────────────
+  function showUnlockBanner() {
+    if (document.getElementById("snake-unlock-banner")) return;
+    const el = document.createElement("div");
+    el.id = "snake-unlock-banner";
+    el.innerHTML = `
+      <div class="snake-unlock-title">🐍 Achievement Unlocked: Snake</div>
+      <div class="snake-unlock-sub">Hit Play in the footer to start</div>
+    `;
+    document.body.insertAdjacentElement("afterbegin", el);
+    setTimeout(() => el.remove(), 5000);
+  }
+
+  // ── Entry point ────────────────────────────────────────────────────────
+  function initSnake() {
+    const score = getScore();
+    const state = loadState();
+
+    // Check for new unlock
+    if (score >= UNLOCK_SCORE && !state.unlocked) {
+      state.unlocked = true;
+      saveState(state);
+      showUnlockBanner();
+    }
+
+    // Always close the game on page navigation — the modal is transient
+    if (state.active) {
+      state.active = false;
+      saveState(state);
+      deactivateSnake();
+    }
+
+    updatePlayButton(loadState());
+    wirePlayButton();
+  }
+
+  // Mutual exclusivity — deactivate if any other mode activates
+  document.addEventListener("mej:mode-activate", (e: Event) => {
+    const detail = (e as CustomEvent<{ mode: string }>).detail;
+    if (detail?.mode !== "snake") {
+      const s = loadState();
+      if (s.active) {
+        s.active = false;
+        saveState(s);
+        deactivateSnake();
+        updatePlayButton(loadState());
+      }
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", initSnake);
+  document.addEventListener("astro:after-swap",  initSnake);
+</script>
