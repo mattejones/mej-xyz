@@ -1,6 +1,6 @@
 # mej.xyz
 
-Personal website and technical blog of Matt E. Jones. Built with Astro, deployed on Cloudflare Pagesm, monitoried by PostHog
+Personal website and technical blog of Matt E. Jones. Built with Astro, deployed on Cloudflare Pages.
 
 Live at [mej.xyz](https://mej.xyz)
 
