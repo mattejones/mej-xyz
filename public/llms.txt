@@ -1,0 +1,36 @@
+# Matt E. Jones
+
+> Personal website and technical blog of Matt E. Jones — a customer-facing technical specialist and generalist engineer with a background in enterprise support, business systems (Salesforce, Zendesk, HubSpot), Java microservices, and applied AI/LLM tooling. Site includes a CV, engineering write-ups, and side projects.
+
+## CV
+
+- [CV (HTML)](https://mej.xyz/work): Full work history, skills and experience
+- [CV (Markdown)](https://mej.xyz/cv/Matt-Jones-CV.md): Plain-text CV, easiest format for parsing
+- [CV (PDF)](https://mej.xyz/cv/Matt-Jones-CV.pdf): Downloadable PDF version
+
+## Blog
+
+- [Setting up my blog](https://mej.xyz/blog/001-setting-up-blog): Some notes on setting up my blog
+- [Astro wouldn't start](https://mej.xyz/blog/002-npm-errors-with-versions): When running Astro on Linux, I couldn't get it to start. Here is how I fixed that
+- [Decompiling java on the fly in vim](https://mej.xyz/blog/004-vim-java-class-decompilers): Using Vim with Java Decompilers for fun code browsing
+- [Kubernetes install guides need updating](https://mej.xyz/blog/005-kubernetes-install-instructions-bork): When unmaintained recipes need updates due to deprecation
+- [Some notes on how my website works](https://mej.xyz/blog/006-how-my-website-works): Documenting current and future website setup
+- [When OpenBSD's virtio Driver Says "No Carrier"](https://mej.xyz/blog/013-proxmox-openbsd-vio/proxmox-openbsd-networking): Debugging why OpenBSD VMs on Proxmox show permanent "no carrier" on VLAN-tagged virtio interfaces, and what I learned about interrupt handling along the way
+- [Website infrastructure improvements](https://mej.xyz/blog/014-how-website-now-works): Migrated to Cloudflare Pages for an easier life
+- [Structured output and the thinking budget trade-off](https://mej.xyz/blog/015-structured-output-thinking-budget): Why you can't always have structured output and extended thinking at the same time, and what to do about it
+- [Exploring an LLM Judge and human-in-the-loop patterns](https://mej.xyz/blog/016-llm-judges-and-reasoning): Building better quality text output with no-cost judges
+- [Lightweight data analysis on a shoestring](https://mej.xyz/blog/017-lightweight-practices-for-data-analysis): How to build a reproducible data analysis pipeline from scratch, using only local tools and version control such as SQLite, DuckDB, Python and Git
+- [Windows Window Manager](https://mej.xyz/blog/020-windows-windows-manager): Notes on getting started with komorebi, a tiling window manager
+- [Spotify Play History](https://mej.xyz/blog/021-spotify-play-history): Overcoming the 50 song limit on Spotify play history
+- [Building a custom MCP for my Homelab](https://mej.xyz/blog/023-homelab-mcp-solution): Exploring ideas around automated system controls with AI
+
+## Projects
+
+- [BD-locator](https://mej.xyz/projects/bd-locator): Identify local partnerships in the care sector
+- [The Chopper Project](https://mej.xyz/projects/chopper): Building a leaf fragmentation simulator, running 40,320 parameter combinations across a home compute grid, and using symbolic regression to derive a formula for how many passes it takes to chop N leaves to a target size
+- [Company Lens](https://mej.xyz/projects/company-lens): Enrich UK Companies House data with LLM-inferred and verification-backed domain intelligence
+- [Spotify Play History](https://mej.xyz/projects/spotify-play-history): Spotify play history poller for collecting long term music preferences
+
+## Contact
+
+- [Contact](https://mej.xyz/contact): Get in touch
