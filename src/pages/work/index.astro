@@ -2,7 +2,7 @@
 import { getCollection } from "astro:content";
 import PageLayout from "@layouts/PageLayout.astro";
 import { dateRange } from "@lib/utils";
-import { WORK, SITE, SKILLS } from "@consts";
+import { WORK, SITE, SKILLS, SOCIALS } from "@consts";
 
 const collection = (await getCollection("work"))
   .sort((a, b) => new Date(b.data.dateStart).valueOf() - new Date(a.data.dateStart).valueOf());
@@ -13,9 +13,27 @@ const work = await Promise.all(
     return { ...item, Content };
   })
 );
+
+const current = work[0]?.data;
+
+const personLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: SITE.NAME,
+  email: `mailto:${SITE.EMAIL}`,
+  url: new URL("/work", Astro.site).toString(),
+  ...(current && {
+    jobTitle: current.role,
+    worksFor: { "@type": "Organization", name: current.company },
+  }),
+  sameAs: SOCIALS.map((s) => s.HREF),
+  knowsAbout: SKILLS,
+};
 ---
 
 <PageLayout title={WORK.TITLE} description={WORK.DESCRIPTION}>
+
+  <script type="application/ld+json" set:html={JSON.stringify(personLd)} />
 
   <!-- Header -->
   <section style="border-bottom: 2px solid var(--border)">
@@ -32,6 +50,29 @@ const work = await Promise.all(
             positive and caring attituide to my work and those around me. A broad technical generalist who can deep-dive 
             on any topic.
           </p>
+
+          <a
+            href="/cv/Matt-Jones-CV.pdf"
+            download="Matt-Jones-CV.pdf"
+            class="cv-banner nb-card-accent animate mt-8 inline-flex items-center gap-4 px-6 py-4 no-underline"
+          >
+            <span class="cv-banner-emoji text-3xl" aria-hidden="true">📄</span>
+            <span class="flex flex-col">
+              <span class="font-sans font-bold text-sm uppercase tracking-widest">Grab the PDF</span>
+              <span class="font-serif text-xs opacity-90">No padding. Zero fluff. Download my CV.</span>
+            </span>
+            <span class="cv-banner-arrow font-sans font-bold text-lg">&darr;</span>
+          </a>
+
+          <div class="mt-3">
+            <a
+              href="/cv/Matt-Jones-CV.md"
+              class="font-sans font-semibold text-xs uppercase tracking-widest"
+              style="color: var(--text-muted)"
+            >
+              Plain-text version (Markdown)
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -84,3 +125,26 @@ const work = await Promise.all(
   </div>
 
 </PageLayout>
+
+<style>
+  .cv-banner {
+    color: #fff;
+    transform: rotate(-1deg);
+  }
+  .cv-banner:hover {
+    transform: rotate(-1deg) translate(2px, 2px);
+  }
+  .cv-banner-emoji {
+    display: inline-block;
+    transition: transform 0.2s ease;
+  }
+  .cv-banner:hover .cv-banner-emoji {
+    transform: rotate(-12deg) scale(1.15);
+  }
+  .cv-banner-arrow {
+    transition: transform 0.2s ease;
+  }
+  .cv-banner:hover .cv-banner-arrow {
+    transform: translateY(3px);
+  }
+</style>
