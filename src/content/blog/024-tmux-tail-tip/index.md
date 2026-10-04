@@ -72,4 +72,31 @@ This turned my earlier tweet-length command into this:
 tmuxtail data /data/dss/run/build-base-image.log
 ```
 
+Which gives me something like this, with the build ticking along underneath while I get on with other things:
+
+```text
+┌─ dev-box ────────────────────────────────────────────────────────────────┐
+│ mattjones@dev-box:~$ tmuxtail data /data/dss/run/build-base-image.log    │
+│ mattjones@dev-box:~$ git log --oneline -3                                │
+│ 3f9c2e1 (HEAD -> main) add tmuxtail                                      │
+│ a71b0d4 tidy ssh config                                                  │
+│ 0c4d9e8 first commit                                                     │
+│ mattjones@dev-box:~$ █                                                   │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Step 36/43 : RUN pip install --no-cache-dir -r requirements.txt          │
+│  ---> Running in 4be0f1c2a9d3                                            │
+│ Collecting pandas==2.2.3                                                 │
+│   Downloading pandas-2.2.3-cp312-manylinux_2_17_x86_64.whl (12.7 MB)     │
+│ Successfully installed numpy-2.1.3 pandas-2.2.3 pyarrow-17.0.0           │
+│  ---> Removed intermediate container 4be0f1c2a9d3                        │
+│ Step 37/43 : USER 500                                                    │
+│  ---> Running in e6af6c947e53                                            │
+│ Step 38/43 : ENV HOME=/home/app                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│ [0] 0:bash*                                    "dev-box" 18:35 04-Oct-26 │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
 And it can be recycled for other log watching on other machines as well as local log observations, which I think is pretty dandy. 
