@@ -8,17 +8,17 @@ tags:
   - tmux
 ---
 
-Every so often I print off a tmux cheat-sheet and stick it to my monitor. I'm a casual tmux user. Normally when I have a specific need, realise the power and then continue to use it. 
+Every so often I print off a tmux cheat-sheet and stick it to my monitor. I'm a casual tmux user. Normally I pick something up when I have a specific need, realise the power and then continue to use it. 
 
 One use-case for tmux that I leverage is having something run in the corner of my screen without a new terminal. For instance, seeing application traffic or a docker build completing.
 
-Here's a simple command I found myself cludging together (really, compiling from scrolling through my command history until I got a near enough command I could modify):
+Here's a simple command I found myself kludging together (really, compiling from scrolling through my command history until I got a near enough command I could modify):
 
 ```
-tmux split-window -v -l 30% "ssh -t -i ~/.ssh/k8s_homelab mattjones@data.srv.home.wheeliecheesy.com 'tail -F /data/dss/run/build-base-image.log'"`
+tmux split-window -v -l 30% "ssh -t -i ~/.ssh/k8s_homelab mattjones@data.srv.home.wheeliecheesy.com 'tail -F /data/dss/run/build-base-image.log'"
 ```
 
-That's nearly as long as an old-school twitter post. Yikes. Time to clean this up a little. 
+That's nearly as long as an old-school Twitter post. Yikes. Time to clean this up a little. 
 
 To be fair everything was useful: 
 - `tmux split-window -v -l 30%` - opens a new pane underneath, at 30% of the height.
@@ -28,7 +28,7 @@ To be fair everything was useful:
 - `tail -F` follows the file, even if it gets replaced.
 
 ## step one of two
-So, first was to actually fix my SSH a little so I don't have to mention keys and fqdn's in `~/.ssh/config`. This isn't really the focus of the article. That was on me, I was just recycling my command history up until this point. 
+So, first was to actually fix my SSH a little so I don't have to mention keys and FQDNs in `~/.ssh/config`. This isn't really the focus of the article. That was on me, I was just recycling my command history up until this point. 
 
 ```
 # --- homelab ---
@@ -40,12 +40,12 @@ Host *.srv.home.wheeliecheesy.com data k8s-01 k8s-02 k8s-03 edge filer dns01 dns
     IdentityFile ~/.ssh/k8s_homelab
     IdentitiesOnly yes
 ```
-now ssh data just works. wonderful. 
+Now `ssh data` just works. Wonderful. That's also where the key went: `IdentityFile` points at the right one, and `IdentitiesOnly yes` stops SSH offering every other key first, which some servers reward with a baffling "Too many authentication failures". 
 
 
 ## step two of two
 
-with ssh finally setup in a reasonable way. I then added a simple shell function in `~/.bashrc`
+With SSH finally set up in a reasonable way, I then added a simple shell function to `~/.bashrc`:
 
 
 ```
@@ -66,10 +66,10 @@ tmuxtail() {
 }
 ```
 
-this resulted in my earlier tweet lenth command becoming this: 
+This turned my earlier tweet-length command into this:
 
 ```
 tmuxtail data /data/dss/run/build-base-image.log
 ```
 
-and it can be recycled for other log watching on other machines as well as local log observations, which I think is pretty dandy. 
+And it can be recycled for other log watching on other machines as well as local log observations, which I think is pretty dandy. 
